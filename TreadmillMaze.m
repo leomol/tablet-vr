@@ -169,7 +169,7 @@ classdef TreadmillMaze < handle
             obj.nodes = Nodes();
             obj.nodes.register('Change', @(position, distance, yaw, rotation)obj.onChange(position, distance, yaw));
             obj.nodes.register('Lap', @(lap)obj.onLap);
-            obj.nodes.register('Node', @(node)obj.onNode);
+            obj.nodes.register('Node', @obj.onNode);
             obj.nodes.register('Update', @obj.onUpdate);
             obj.nodes.vertices = obj.vertices;
             
