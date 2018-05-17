@@ -1,10 +1,7 @@
 % 2017-12-13. Leonardo Molina.
-% 2018-05-10. Last modified.
+% 2018-05-16. Last modified.
 classdef CircularMaze < handle
     properties (Access = public)
-        % gain - Forward speed factor.
-        gain = 1
-        
         % intertrial - Duration (s) of an intertrial when last node is reached.
         intertrialDuration = 0
         
@@ -38,9 +35,20 @@ classdef CircularMaze < handle
         position = [0, 0]
     end
     
+    properties (Dependent)
+        % gain - Forward speed factor in closed-loop when the rotary encoder produces movement.
+        gain
+        
+        % speed - Forward speed in open-loop.
+        speed
+    end
+    
     properties (Access = private)
         % addresses - IP addresses listed under monitors.
         addresses
+        
+        % blankId - Process id for scheduling blank periods.
+        blankId
         
         % className - Name of this class.
         className
@@ -54,17 +62,18 @@ classdef CircularMaze < handle
         % figureHandle - UI handle to control figure.
         figureHandle
         
-        % nodes - Nodes object for controlling behavior.
-        nodes
+        mGain = 1;
+        
+        mSpeed = 0;
         
         % offsets - Monitor rotation offset listed under monitors.
         offsets
         
         % pauseId - Process id for scheduling pauses.
         pauseId
-    
+        
         % radius - Radius (cm) of the circular path.
-        radius = 25
+        radius = 38
         
         % rotation - Rotation of the camera.
         rotation = 0
@@ -78,6 +87,9 @@ classdef CircularMaze < handle
         % startTime - Reference to time at start.
         startTime
         
+        % textBox - Textbox GUI.
+        textBox
+        
         % treadmill - Arduino controlled apparatus.
         treadmill
         
@@ -87,7 +99,7 @@ classdef CircularMaze < handle
         % vertices - Vertices of the maze (x1, y1, x2, y2, ... in cm).
         vertices
         
-        catPosition = 0
+        catDistance = 0
     end
     
     properties (Constant)
@@ -95,7 +107,7 @@ classdef CircularMaze < handle
         fps = 50
         
         % programVersion - Version of this function.
-        programVersion = '20180515'
+        programVersion = '20180516'
     end
     
     methods
@@ -127,8 +139,7 @@ classdef CircularMaze < handle
             % Log program versions.
             obj.startTime = tic;
             obj.className = mfilename('class');
-            obj.print('maze-version,%s,%s', obj.className, CircularMaze.programVersion);
-            obj.print('nodes-version,%s', Nodes.programVersion);
+            obj.print('maze-version,%s-%s', obj.className, CircularMaze.programVersion);
             obj.print('filename,%s', obj.filename);
             
             % Initialize treadmill controller.
@@ -146,21 +157,62 @@ classdef CircularMaze < handle
             obj.scheduler.repeat(@obj.onUpdate, 1 / obj.fps);
             
             % Release resources when the figure is closed.
-            obj.figureHandle = figure('Name', 'Close to terminate', 'MenuBar', 'none', 'NumberTitle', 'off', 'DeleteFcn', @(~, ~)obj.delete());
+            obj.figureHandle = figure('Name', mfilename('Class'), 'MenuBar', 'none', 'NumberTitle', 'off', 'DeleteFcn', @(~, ~)obj.delete());
+            h(1) = uicontrol('Style', 'PushButton', 'String', 'Stop',  'Callback', @(~, ~)obj.stop());
+            h(2) = uicontrol('Style', 'PushButton', 'String', 'Start', 'Callback', @(~, ~)obj.start());
+            h(3) = uicontrol('Style', 'PushButton', 'String', 'Reset', 'Callback', @(~, ~)obj.reset());
+            h(4) = uicontrol('Style', 'PushButton', 'String', 'Log text', 'Callback', @(~, ~)obj.uiLog());
+            h(5) = uicontrol('Style', 'Edit');
+            p = get(h(1), 'Position');
+            set(h, 'Position', [p(1:2), 4 * p(3), p(4)]);
+            align(h, 'Left', 'Fixed', 0.5 * p(1));
+            obj.textBox = h(5);
+            set(obj.figureHandle, 'Position', [obj.figureHandle.Position(1), obj.figureHandle.Position(2), 4 * p(3) + 2 * p(1), 2 * numel(h) * p(4)])
             
             % Auto-start.
-            obj.start();
+            obj.speed = 15;
+        end
+        
+        function blank(obj, duration)
+            % CircularMaze.pause(duration)
+            % Show blank for a given duration.
+            
+            obj.scheduler.stop(obj.blankId);
+            if duration == 0
+                obj.sender.send('enable,Blank,0;', obj.addresses);
+            elseif duration > 0
+                obj.sender.send('enable,Blank,1;', obj.addresses);
+                obj.blankId = obj.scheduler.delay({@obj.blank, 0}, duration);
+            end
+        end
+        
+        function set.gain(obj, gain)
+            obj.mGain = gain;
+            obj.print('gain,%.2f', gain);
+        end
+        
+        function gain = get.gain(obj)
+            gain = obj.mGain;
+        end
+        
+        function set.speed(obj, speed)
+            obj.print('speed,%.2f', speed);
+            obj.mSpeed = speed;
+        end
+        
+        function speed = get.speed(obj)
+            speed = obj.mSpeed;
         end
         
         function delete(obj)
             % CircularMaze.delete()
             % Release all resources.
             
-            delete(obj.scheduler);
             obj.treadmill.trigger = false;
+            delete(obj.scheduler);
             delete(obj.treadmill);
             delete(obj.sender);
-            obj.log('delete');
+            obj.log('note,delete');
             fclose(obj.fid);
             CircularMaze.export(obj.filename);
             if ishandle(obj.figureHandle)
@@ -174,6 +226,20 @@ classdef CircularMaze < handle
             % Create a log entry using the same syntax as sprintf.
             
             fprintf(obj.fid, '%.4f,%s\n', toc(obj.startTime), sprintf(format, varargin{:}));
+        end
+        
+        function pushCamera(obj, change)
+            obj.distance = obj.distance + change;
+            theta = obj.distance / obj.radius;
+            obj.position = obj.radius * [sin(theta), cos(theta)];
+
+            % Update monitors with any change in position and rotation.
+            % Always head tangent to the circle.
+            obj.rotation = 90 + atan2(obj.position(1), obj.position(2)) / pi * 180;
+            obj.sender.send(Tools.compose([sprintf(...
+                'position,Main Camera,%.2f,1,%.2f;', obj.position(1), obj.position(2)), ...
+                'rotation,Main Camera,0,%.2f,0;'], obj.rotation + obj.offsets), ...
+                obj.addresses);
         end
         
         function pause(obj, duration)
@@ -258,20 +324,9 @@ classdef CircularMaze < handle
             % The rotary encoder changed, update behavior if enabled
             % Create an entry in the log file otherwise.
             
-            if obj.enabled
-                change = step * obj.gain;
-                obj.distance = obj.distance + change;
-                theta = obj.distance / obj.radius;
-                obj.position = obj.radius * [sin(theta), cos(theta)];
-                
-                % Update monitors with any change in position and rotation.
-                % Always head tangent to the circle.
-                obj.rotation = 90 + atan2(obj.position(1), obj.position(2)) / pi * 180;
-                obj.sender.send(Tools.compose([sprintf(...
-                    'position,Main Camera,%.2f,1,%.2f;', obj.position(1), obj.position(2)), ...
-                    'rotation,Main Camera,0,%.2f,0;'], obj.rotation + obj.offsets), ...
-                    obj.addresses);
-                
+            if obj.enabled && obj.speed == 0
+                obj.pushCamera(step * obj.gain);
+
                 % Create an entry in the log file.
                 if obj.logOnChange
                     obj.log('data,%i,%.2f,%.2f,%.2f,%.2f,%.2f', obj.treadmill.frame, obj.treadmill.step, obj.distance, obj.rotation, obj.position(1), obj.position(2));
@@ -283,11 +338,35 @@ classdef CircularMaze < handle
             % CircularMaze.onUpdate()
             % Create an entry in the log file if logOnUpdate == true.
             
-            obj.catPosition = obj.catPosition + 0.1;
-            obj.sender.send(sprintf('position,Cat,0,%.2f,2;', obj.catPosition), obj.addresses);
+            if obj.enabled
+                % Move camera around the circle.
+                if obj.speed ~= 0
+                    % Open-loop updates position when open-loop speed is different 0.
+                    obj.pushCamera(obj.speed / obj.fps);
+                end
+                
+                % Log.
+                if obj.logOnUpdate
+                    obj.log('data,%i,%.2f,%.2f,%.2f,%.2f,%.2f', obj.treadmill.frame, obj.treadmill.step, obj.distance, obj.rotation, obj.position(1), obj.position(2));
+                end
+            end
+                
+            % Move cat around a smaller circle.
+            obj.catDistance = obj.catDistance - 0.5 * obj.speed / obj.fps;
+            r = 1.025 * obj.radius;
+            theta = obj.catDistance / r;
+            pos = r * [sin(theta), cos(theta)];
+            rot = 90 + atan2(pos(1), pos(2)) / pi * 180;
+            obj.sender.send(sprintf('position,Cat,%.2f,%.2f,%.2f;rotation,Cat,0,%.2f,0;', pos(1), sin(45 * theta) + 1.5, pos(2), rot), obj.addresses);
+        end
+        
+        function uiLog(obj)
+            % CircularMaze.uiLog()
+            % Log user text.
             
-            if obj.logOnUpdate
-                obj.log('data,%i,%.2f,%.2f,%.2f,%.2f,%.2f', obj.treadmill.frame, obj.treadmill.step, obj.distance, obj.rotation, obj.position(1), obj.position(2));
+            if ~isempty(obj.textBox.String)
+                obj.print('note,%s', obj.textBox.String);
+                obj.textBox.String = '';
             end
         end
     end

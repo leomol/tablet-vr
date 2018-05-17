@@ -1,5 +1,5 @@
 % 2017-12-13. Leonardo Molina.
-% 2018-05-15. Leonardo Molina.
+% 2018-05-17. Leonardo Molina.
 classdef TreadmillMaze < handle
     properties
         % intertrialBehavior - Whether to permit behavior during an intertrial.
@@ -30,7 +30,7 @@ classdef TreadmillMaze < handle
     
     properties (SetAccess = private)
         % com - Serial port name.
-        com = 'COM3';
+        com
         
         % filename - Name of the log file.
         filename
@@ -63,6 +63,9 @@ classdef TreadmillMaze < handle
         % addresses - IP addresses listed under monitors.
         addresses
         
+        % blankId - Process id for scheduling blank periods.
+        blankId
+        
         % className - Name of this class.
         className
         
@@ -84,6 +87,9 @@ classdef TreadmillMaze < handle
         
         % offsets - Monitor rotation offset listed under monitors.
         offsets
+        
+        % pauseId - Process id for scheduling pauses.
+        pauseId
         
         % scheduler - Scheduler object for non-blocking pauses.
         scheduler
@@ -111,8 +117,11 @@ classdef TreadmillMaze < handle
     end
     
     properties (Constant)
+        % fps - Frames per seconds for time integration; should match VR game.
+        fps = 50
+        
         % programVersion - Version of this class.
-        programVersion = '20180515';
+        programVersion = '20180517';
     end
     
     methods
@@ -134,7 +143,7 @@ classdef TreadmillMaze < handle
             % Remember version and session names.
             obj.startTime = tic;
             obj.className = mfilename('class');
-            obj.print('maze-version,%s', obj.className, TreadmillMaze.programVersion);
+            obj.print('maze-version,%s-%s', obj.className, TreadmillMaze.programVersion);
             obj.print('nodes-version,%s', Nodes.programVersion);
             obj.print('treadmill-version,%s', ArduinoTreadmill.programVersion);
             obj.print('filename,%s', obj.filename);
@@ -162,16 +171,15 @@ classdef TreadmillMaze < handle
             obj.treadmill.register('Step', @obj.onStep);
             obj.treadmill.register('Tape', @obj.onTape);
             
-            % Scheduler object for non-blocking pauses.
-            obj.scheduler = Scheduler();
-            
             % Initialize nodes.
             obj.nodes = Nodes();
             obj.nodes.register('Change', @(position, distance, yaw, rotation)obj.onChange(position, distance, yaw));
             obj.nodes.register('Lap', @(lap)obj.onLap);
             obj.nodes.register('Node', @obj.onNode);
-            obj.nodes.register('Update', @obj.onUpdate);
             obj.nodes.vertices = obj.vertices;
+            
+            obj.scheduler = Scheduler();
+            obj.scheduler.repeat(@obj.onUpdate, 1 / obj.fps);
             
             % Release resources when the figure is closed.
             obj.figureHandle = figure('Name', mfilename('Class'), 'MenuBar', 'none', 'NumberTitle', 'off', 'DeleteFcn', @(~, ~)obj.delete());
@@ -191,12 +199,12 @@ classdef TreadmillMaze < handle
             % TreadmillMaze.pause(duration)
             % Show blank for a given duration.
             
-            obj.scheduler.stop();
+            obj.scheduler.stop(obj.blankId);
             if duration == 0
                 obj.sender.send('enable,Blank,0;', obj.addresses);
             elseif duration > 0
                 obj.sender.send('enable,Blank,1;', obj.addresses);
-                obj.scheduler.delay({@obj.blank, 0}, duration);
+                obj.blankId = obj.scheduler.delay({@obj.blank, 0}, duration);
             end
         end
         
@@ -247,14 +255,14 @@ classdef TreadmillMaze < handle
             % TreadmillMaze.pause(duration)
             % Show blank and disable behavior for a given duration.
             
-            obj.scheduler.stop();
+            obj.scheduler.stop(obj.pauseId);
             if duration == 0
                 obj.enabled = true;
                 obj.sender.send('enable,Blank,0;', obj.addresses);
             elseif duration > 0
                 obj.enabled = false;
                 obj.sender.send('enable,Blank,1;', obj.addresses);
-                obj.scheduler.delay({@obj.pause, 0}, duration);
+                obj.pauseId = obj.scheduler.delay({@obj.pause, 0}, duration);
             end
         end
         
@@ -404,7 +412,7 @@ classdef TreadmillMaze < handle
             % The rotary encoder changed, update behavior if enabled
             % Create an entry in the log file otherwise.
             
-            if obj.speed == 0 && obj.enabled && ~obj.nodes.rotating
+            if obj.enabled && obj.speed == 0 && ~obj.nodes.rotating
                 % Rotary encoder changes position unless open-loop speed is different than 0.
                 obj.nodes.push(step * obj.gain);
             end
@@ -432,8 +440,10 @@ classdef TreadmillMaze < handle
             % TreadmillMaze.uiLog()
             % Log user text.
             
-            obj.print('note,%s', obj.textBox.String);
-            obj.textBox.String = '';
+            if ~isempty(obj.textBox.String)
+                obj.print('note,%s', obj.textBox.String);
+                obj.textBox.String = '';
+            end
         end
     end
     

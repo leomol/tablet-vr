@@ -11,7 +11,7 @@
 %   register('Step', @callback)  - Treadmill position changed.
 
 % 2018-03-05. Leonardo Molina.
-% 2018-05-10. Last modified.
+% 2018-05-17. Last modified.
 classdef ArduinoTreadmill < Event
     properties
         % step - Encoder position.
@@ -28,7 +28,7 @@ classdef ArduinoTreadmill < Event
     
     properties (Constant)
         % programVersion - Program version.
-        programVersion = '20180503'
+        programVersion = '20180517'
     end
     
     properties (Hidden)
