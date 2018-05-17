@@ -64,7 +64,7 @@ classdef TreadmillMaze < handle
         addresses
         
         % blankId - Process id for scheduling blank periods.
-        blankId
+        blankId = 0
         
         % className - Name of this class.
         className
@@ -89,7 +89,7 @@ classdef TreadmillMaze < handle
         offsets
         
         % pauseId - Process id for scheduling pauses.
-        pauseId
+        pauseId = 0
         
         % scheduler - Scheduler object for non-blocking pauses.
         scheduler

@@ -48,7 +48,7 @@ classdef CircularMaze < handle
         addresses
         
         % blankId - Process id for scheduling blank periods.
-        blankId
+        blankId = 0
         
         % className - Name of this class.
         className
@@ -70,7 +70,7 @@ classdef CircularMaze < handle
         offsets
         
         % pauseId - Process id for scheduling pauses.
-        pauseId
+        pauseId = 0
         
         % radius - Radius (cm) of the circular path.
         radius = 38
@@ -171,6 +171,8 @@ classdef CircularMaze < handle
             
             % Auto-start.
             obj.speed = 15;
+            obj.start();
+            obj.stop();
         end
         
         function blank(obj, duration)
