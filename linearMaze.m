@@ -8,7 +8,7 @@ classdef linearMaze < handle
         intertrialBehavior = false;
         
         % intertrial - Duration (s) of an intertrial when last node is reached.
-        intertrialDuration = 1;
+        intertrialDuration = 0;
         
         % logOnChange - Create a log entry with every change in position or rotation.
         logOnChange = false;
@@ -23,7 +23,7 @@ classdef linearMaze < handle
         rewardDuration = 0.040;
         
         % rewardTone - Frequency and duration of the tone during a reward.
-        rewardTone = [2000 0.5];
+        rewardTone = [2000 0.1];
         
         % tapeTrigger - Whether to initiate a new trial when photosensor
         % detects a tape strip in the belt.
