@@ -193,6 +193,7 @@ classdef linearMaze < handle
             % TreadmillMaze.pause(duration)
             % Show blank for a given duration.
             
+            duration = 0; %hardcoded to not have a delay
             obj.scheduler.stop();
             if duration == 0
                 obj.sender.send('enable,Blank,0;', obj.addresses);
@@ -317,7 +318,9 @@ classdef linearMaze < handle
             % Send a reward pulse, play a tone, log data, pause.
             
             obj.treadmill.reward(obj.rewardDuration);
-            Tools.tone(obj.rewardTone(1), obj.rewardTone(2));
+            %Tools.tone(obj.rewardTone(1), obj.rewardTone(2)); makes beep
+     
+        
             
             % Disable movement and show blank screen for the given duration.
             if obj.intertrialBehavior
