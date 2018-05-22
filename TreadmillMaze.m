@@ -1,14 +1,12 @@
 % 2017-12-13. Leonardo Molina.
-% 2018-05-15. Leonardo Molina.
-% 2018-05-18. Anil Verman.
-
-classdef linearMaze < handle
+% 2018-05-17. Leonardo Molina.
+classdef TreadmillMaze < handle
     properties
         % intertrialBehavior - Whether to permit behavior during an intertrial.
         intertrialBehavior = false;
         
         % intertrial - Duration (s) of an intertrial when last node is reached.
-        intertrialDuration = 0;
+        intertrialDuration = 1;
         
         % logOnChange - Create a log entry with every change in position or rotation.
         logOnChange = false;
@@ -23,7 +21,7 @@ classdef linearMaze < handle
         rewardDuration = 0.040;
         
         % rewardTone - Frequency and duration of the tone during a reward.
-        rewardTone = [2000 0.5];
+        rewardTone = [2000 .5];
         
         % tapeTrigger - Whether to initiate a new trial when photosensor
         % detects a tape strip in the belt.
@@ -32,7 +30,7 @@ classdef linearMaze < handle
     
     properties (SetAccess = private)
         % com - Serial port name.
-        com = 'COM3';
+        com
         
         % filename - Name of the log file.
         filename
@@ -41,7 +39,7 @@ classdef linearMaze < handle
         monitors = {'127.0.0.1', 0, '192.168.1.105', 0, '192.168.1.135', -90, '192.168.1.109', 90};
         
         % scene - Name of an existing scene.
-        scene = 'linearMaze';
+        scene = 'Tunnel';
 		
         % vertices - Vertices of the maze (x1, y1, x2, y2, ... in cm).
         vertices = [0, -100, ...
@@ -65,6 +63,9 @@ classdef linearMaze < handle
         % addresses - IP addresses listed under monitors.
         addresses
         
+        % blankId - Process id for scheduling blank periods.
+        blankId = 0
+        
         % className - Name of this class.
         className
         
@@ -79,13 +80,16 @@ classdef linearMaze < handle
         
         mGain = 1;
         
-        mSpeed = 50;
+        mSpeed = 0;
         
         % nodes - Nodes object for controlling behavior.
         nodes
         
         % offsets - Monitor rotation offset listed under monitors.
         offsets
+        
+        % pauseId - Process id for scheduling pauses.
+        pauseId = 0
         
         % scheduler - Scheduler object for non-blocking pauses.
         scheduler
@@ -113,12 +117,15 @@ classdef linearMaze < handle
     end
     
     properties (Constant)
+        % fps - Frames per seconds for time integration; should match VR game.
+        fps = 50
+        
         % programVersion - Version of this class.
-        programVersion = '20180515';
+        programVersion = '20180517';
     end
     
     methods
-        function obj = linearMaze(com)
+        function obj = TreadmillMaze(com)
             % TreadmillMaze()
             % TreadmillMaze(com)
             % Controller for a liner-maze.
@@ -128,7 +135,7 @@ classdef linearMaze < handle
             end
             
             % Create a log file.
-            folder = fullfile(getenv('USERPROFILE'), 'Documents','GitHub', 'VR');
+            folder = fullfile(getenv('USERPROFILE'), 'Documents', 'VR');
             session = sprintf('VR%s', datestr(now, 'yyyymmddHHMMSS'));
             obj.filename = fullfile(folder, sprintf('%s.csv', session));
             obj.fid = Files.open(obj.filename, 'a');
@@ -136,7 +143,7 @@ classdef linearMaze < handle
             % Remember version and session names.
             obj.startTime = tic;
             obj.className = mfilename('class');
-            obj.print('maze-version,%s', obj.className, TreadmillMaze.programVersion);
+            obj.print('maze-version,%s-%s', obj.className, TreadmillMaze.programVersion);
             obj.print('nodes-version,%s', Nodes.programVersion);
             obj.print('treadmill-version,%s', ArduinoTreadmill.programVersion);
             obj.print('filename,%s', obj.filename);
@@ -164,16 +171,15 @@ classdef linearMaze < handle
             obj.treadmill.register('Step', @obj.onStep);
             obj.treadmill.register('Tape', @obj.onTape);
             
-            % Scheduler object for non-blocking pauses.
-            obj.scheduler = Scheduler();
-            
             % Initialize nodes.
             obj.nodes = Nodes();
             obj.nodes.register('Change', @(position, distance, yaw, rotation)obj.onChange(position, distance, yaw));
             obj.nodes.register('Lap', @(lap)obj.onLap);
             obj.nodes.register('Node', @obj.onNode);
-            obj.nodes.register('Update', @obj.onUpdate);
             obj.nodes.vertices = obj.vertices;
+            
+            obj.scheduler = Scheduler();
+            obj.scheduler.repeat(@obj.onUpdate, 1 / obj.fps);
             
             % Release resources when the figure is closed.
             obj.figureHandle = figure('Name', mfilename('Class'), 'MenuBar', 'none', 'NumberTitle', 'off', 'DeleteFcn', @(~, ~)obj.delete());
@@ -193,13 +199,12 @@ classdef linearMaze < handle
             % TreadmillMaze.pause(duration)
             % Show blank for a given duration.
             
-            %duration = 0; %hardcoded to not have a delay
-            obj.scheduler.stop();
+            obj.scheduler.stop(obj.blankId);
             if duration == 0
                 obj.sender.send('enable,Blank,0;', obj.addresses);
             elseif duration > 0
                 obj.sender.send('enable,Blank,1;', obj.addresses);
-                obj.scheduler.delay({@obj.blank, 0}, duration);
+                obj.blankId = obj.scheduler.delay({@obj.blank, 0}, duration);
             end
         end
         
@@ -250,14 +255,14 @@ classdef linearMaze < handle
             % TreadmillMaze.pause(duration)
             % Show blank and disable behavior for a given duration.
             
-            obj.scheduler.stop();
+            obj.scheduler.stop(obj.pauseId);
             if duration == 0
                 obj.enabled = true;
                 obj.sender.send('enable,Blank,0;', obj.addresses);
             elseif duration > 0
                 obj.enabled = false;
                 obj.sender.send('enable,Blank,1;', obj.addresses);
-                obj.scheduler.delay({@obj.pause, 0}, duration);
+                obj.pauseId = obj.scheduler.delay({@obj.pause, 0}, duration);
             end
         end
         
@@ -318,9 +323,7 @@ classdef linearMaze < handle
             % Send a reward pulse, play a tone, log data, pause.
             
             obj.treadmill.reward(obj.rewardDuration);
-            %Tools.tone(obj.rewardTone(1), obj.rewardTone(2)); makes beep
-     
-        
+            Tools.tone(obj.rewardTone(1), obj.rewardTone(2));
             
             % Disable movement and show blank screen for the given duration.
             if obj.intertrialBehavior
@@ -409,7 +412,7 @@ classdef linearMaze < handle
             % The rotary encoder changed, update behavior if enabled
             % Create an entry in the log file otherwise.
             
-            if obj.speed == 0 && obj.enabled && ~obj.nodes.rotating
+            if obj.enabled && obj.speed == 0 && ~obj.nodes.rotating
                 % Rotary encoder changes position unless open-loop speed is different than 0.
                 obj.nodes.push(step * obj.gain);
             end
@@ -430,6 +433,7 @@ classdef linearMaze < handle
                     obj.update = str;
                     obj.log(str);
                 end
+            
             end
         end
         
@@ -437,8 +441,10 @@ classdef linearMaze < handle
             % TreadmillMaze.uiLog()
             % Log user text.
             
-            obj.print('note,%s', obj.textBox.String);
-            obj.textBox.String = '';
+            if ~isempty(obj.textBox.String)
+                obj.print('note,%s', obj.textBox.String);
+                obj.textBox.String = '';
+            end
         end
     end
     

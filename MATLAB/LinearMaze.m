@@ -57,7 +57,11 @@ classdef LinearMaze < handle
         rewardDuration = 0.040;
         
         % rewardTone - Frequency and duration of the tone during a reward.
+<<<<<<< HEAD:MATLAB/LinearMaze.m
         rewardTone = [2000, 0.5];
+=======
+        rewardTone = [2000 .5];
+>>>>>>> hardcoded bank(duration) to not have any delay (linearMaze.m). removed main camera from unity scenes. added straight track to linearMaze.unity. currently have camera go in a loop from start to end of track fairly seamlessly. next will make splitBranch prefabs and make input code: keys, movie(random,scripted), arduino.:TreadmillMaze.m
         
         % tapeTrigger - Whether to initiate a new trial when photosensor
         % detects a tape strip in the belt.
@@ -113,7 +117,7 @@ classdef LinearMaze < handle
         
         mGain = 1;
         
-        mSpeed = 0;
+        mSpeed = 10;
         
         % nodes - Nodes object for controlling behavior.
         nodes
