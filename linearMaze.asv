@@ -23,7 +23,7 @@ classdef linearMaze < handle
         rewardDuration = 0.040;
         
         % rewardTone - Frequency and duration of the tone during a reward.
-        rewardTone = [2000 0.5];
+        rewardTone = [2000 0.1];
         
         % tapeTrigger - Whether to initiate a new trial when photosensor
         % detects a tape strip in the belt.
@@ -202,7 +202,7 @@ classdef linearMaze < handle
             % TreadmillMaze.pause(duration)
             % Show blank for a given duration.
             
-            %duration = 0; %hardcoded to not have a delay
+            duration = 0; %hardcoded to not have a delay
             obj.scheduler.stop();
             if duration == 0
                 obj.sender.send('enable,Blank,0;', obj.addresses);
@@ -326,11 +326,11 @@ classdef linearMaze < handle
             % TreadmillMaze.newTrial()
             % Send a reward pulse, play a tone, log data, pause, new rand_movie value(0,1) generated.
             
-            obj.rand_movie = randi([0,1]); %set path left or right
+            obj.rand_movie = randi([0,1]);
             if obj.rand_movie == 0 %left path
-                obj.nodes.vertices(end-1:end) = [-35,0];
+                obj.nodes.vertices(end-1,end) = [-35,0];
             elseif obj.rand_movie == 1 %right path
-                obj.nodes.vertices(end-1:end) = [35,0];
+                obj.nodes.vertices(end-1,end) = [35,0];
             end
                 
             
