@@ -326,11 +326,11 @@ classdef linearMaze < handle
             % TreadmillMaze.newTrial()
             % Send a reward pulse, play a tone, log data, pause, new rand_movie value(0,1) generated.
             
-            obj.rand_movie = randi([0,1]); %set path left or right
+            obj.rand_movie = randi([0,1]);
             if obj.rand_movie == 0 %left path
-                obj.nodes.vertices(end-1:end) = [-35,0];
+                obj.nodes.vertices(end-1,end) = [-35,0];
             elseif obj.rand_movie == 1 %right path
-                obj.nodes.vertices(end-1:end) = [35,0];
+                obj.nodes.vertices(end-1,end) = [35,0];
             end
                 
             
