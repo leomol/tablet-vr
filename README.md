@@ -105,12 +105,12 @@ end
 In MATLAB type help followed by the name of any Class (files copied to Documents/MATLAB). Most class list methods and properties with links to expand the description. For example, `help LinearMaze`.
 
 ## Version History
-0.2
+### 0.2
 * TreadmillMaze.m moved to LinearMaze.m
 * Tracker/GUI.m moved to Tracker.m
 * Arguments to LinearMaze.m and CircleMaze.m are passed as key-value pairs, e.g., `CircleMaze('com', 'COM4', 'monitors', {'127.0.0.1', 0, '192.168.1.100', 90})`
-0.1
-Initial Release: Library and example code
+### 0.1
+* Initial Release: Library and example code
 
 ## License
 © 2018 [Leonardo Molina][Leonardo Molina]
