@@ -21,7 +21,7 @@ classdef TreadmillMaze < handle
         rewardDuration = 0.040;
         
         % rewardTone - Frequency and duration of the tone during a reward.
-        rewardTone = [2000 0.5];
+        rewardTone = [2000 .5];
         
         % tapeTrigger - Whether to initiate a new trial when photosensor
         % detects a tape strip in the belt.
@@ -80,7 +80,7 @@ classdef TreadmillMaze < handle
         
         mGain = 1;
         
-        mSpeed = 0;
+        mSpeed = 10;
         
         % nodes - Nodes object for controlling behavior.
         nodes
