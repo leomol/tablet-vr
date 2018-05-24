@@ -1,4 +1,4 @@
-% Objects - Safely delete objects or check their validity.
+% Objects - Safely delete objects or check for their validity.
 % 
 % Objects methods:
 %   delete   - Delete one or more objects in a valid state.
@@ -6,7 +6,7 @@
 %   isValid  - Test if one or more inputs are valid objects.
 
 % 2016-05-12. Leonardo Molina.
-% 2018-04-26. Last modified.
+% 2018-05-21. Last modified.
 classdef Objects
     methods (Static)
         function assign(object, field, value)

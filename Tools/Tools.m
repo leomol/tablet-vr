@@ -3,12 +3,13 @@
 %   argsToCell        - Standardize input arguments.
 %   compare           - Compare strings.
 %   compose           - Build a cell array of formatted strings from each input.
+%   distance          - Pair wise distance between two position arrays.
 %   exceptionToString - Convert an exception stack to text with hyperlinks.
 %   stackHyperlink    - Create hyperlinks from a given stack.
 %   tone              - Play a tone with the given frequency and duration.
 
 % 2016-05-12. Leonardo Molina.
-% 2018-04-03. Last modified.
+% 2018-05-24. Last modified.
 classdef Tools
     methods (Static)
         function c = argsToCell(varargin)
@@ -86,6 +87,18 @@ classdef Tools
             composed = cell(1, nStrings);
             for j = 1:nStrings
                 composed{j} = sprintf(format, values{:, j});
+            end
+        end
+        
+        function d = distance(x1, y1, x2, y2)
+            % distance = distance(x1, y1, x2, y2)
+            % Pair wise distance between all (x1, y1) and all (x2, y2) points.
+            
+            nc = numel(x2);
+            np = numel(x1);
+            d = NaN(np, nc);
+            for c = 1:nc
+                d(:, c) = (x1(:) - x2(c)) .^ 2 + (y1(:) - y2(c)) .^ 2;
             end
         end
 

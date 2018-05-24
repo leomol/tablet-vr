@@ -1,7 +1,37 @@
+% Nodes - Abstraction of a task that occurs following a path in an arbitrary 2D mesh.
+% Define a navigable path. A method 'push' moves a pointer by a given amount and 
+% changes its rotation to face the next node. Events are raised to indicate when 
+% nodes are reached or laps are completed.
 % Position and rotation are for a left-handed coordinate system.
+% 
+% Nodes methods:
+%   delete       - Release resources.
+%   push         - Move forward or backward by a given amount.
+%   rotate       - Rotate.
+%   select       - Get position of a subset of nodes by their index.
+% 
+% Nodes properties:
+%   angularSpeed - Speed (deg/s) at which to rotate camera at each node.
+%   count        - Number of nodes.
+%   distance     - Traveled distance over the path.
+%   fps          - Frames per seconds for time integration; should match VR game.
+%   node         - Node index in the select list.
+%   position     - Current x/z position.
+%   rotating     - Whether a rotation operation is in place.
+%   rotation     - Current bearing direction (y-rotation).
+%   vertices     - Location of the nodes that define a path in the arena.
+%   yaw          - Camera angle.
+%   width        - Length of the unfolded path.
+%   
+% Nodes events - obj.register(eventName, @callback):
+%   Change   - A change in position, yaw, or rotation has occurred.
+%   Lap      - A full lap was traversed.
+%   Node     - A new node was reached.
+%   Rotating - Automatic rotation started.
+%   Update   - A time step has passed.
 
 % 2018-03-05. Leonardo Molina.
-% 2018-05-09. Last modified.
+% 2018-05-21. Last modified.
 classdef Nodes < Event
     properties
         % angularSpeed - Speed (deg/s) at which to rotate camera at each node.
@@ -36,7 +66,7 @@ classdef Nodes < Event
         fps = 50
         
         % programVersion - Version of this class.
-        programVersion = '20180509'
+        programVersion = '20180521'
     end
     
     properties (Dependent)
@@ -94,6 +124,7 @@ classdef Nodes < Event
     methods
         function obj = Nodes()
             % Nodes()
+            % Create a holder for a navigable path.
             
             obj.className = mfilename('Class');
             

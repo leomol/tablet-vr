@@ -1,17 +1,17 @@
 % ArduinoTreadmill(COM)
-% Interface with an Arduino controlled treadmill with MATLAB.
-% COM is the serial port name of the Arduino.
+% Interface between MATLAB and an Arduino-controlled treadmill.
+% COM is the serial port name of an Arduino running a matching firmware.
 % 
 % ArduinoTreadmill methods:
-%   reward - Send a reward for the given duration.
+%   reward   - Send a reward for the given duration.
 %   register - Register to events.
 % 
-% ArduinoTreadmill events:
-%   register('Frame', @callback) - An input frame was detected.
-%   register('Step', @callback)  - Treadmill position changed.
+% ArduinoTreadmill events - obj.register(eventName, @callback):
+%   Frame - An input frame was detected.
+%   Step  - Treadmill position changed.
 
 % 2018-03-05. Leonardo Molina.
-% 2018-05-17. Last modified.
+% 2018-05-21. Last modified.
 classdef ArduinoTreadmill < Event
     properties
         % step - Encoder position.
@@ -28,7 +28,7 @@ classdef ArduinoTreadmill < Event
     
     properties (Constant)
         % programVersion - Program version.
-        programVersion = '20180517'
+        programVersion = '20180521'
     end
     
     properties (Hidden)
@@ -71,8 +71,9 @@ classdef ArduinoTreadmill < Event
     methods
         function obj = ArduinoTreadmill(com)
             % ArduinoTreadmill(com)
-            % - Connect to an Arduino at the given COM port to set up the
-            % - Setup the rotary encoder to report forward movement.
+            % - Connect to an Arduino at the given COM port running a matching
+            %   firmware.
+            % - Setup rotary encoder to report forward movement.
             
             % Connect to the Arduino and setup listeners.
             obj.bridge = Bridge(com);

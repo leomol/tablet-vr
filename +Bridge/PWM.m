@@ -3,7 +3,7 @@
 %   set - Change the pulse deliver to a servo-motor.
 
 % 2018-01-13. Leonardo Molina.
-% 2018-04-30. Last modified.
+% 2018-05-21. Last modified.
 classdef PWM < handle
     properties (Access = private)
         bridge

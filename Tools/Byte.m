@@ -1,4 +1,4 @@
-% Byte - Generic operations over byte arrays.
+% Byte - Generic operations on byte arrays.
 % 
 % Byte methods:
 %   concatenate - Produce a number by concatenating bytes.
@@ -7,7 +7,7 @@
 %   shift       - Bitshift an array of bytes.
 
 % 2016-12-01. Leonardo Molina.
-% 2018-03-22. Last modified.
+% 2018-05-21. Last modified.
 classdef Byte
     methods (Static)
         function number = concatenate(varargin)

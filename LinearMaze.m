@@ -1,4 +1,4 @@
-% CircularMaze - Controller for a circular maze using custom behavioral apparatus.
+% LinearMaze - Controller for a linear maze using custom behavioral apparatus.
 % 
 % Movement is initiated by a subject running on a treadmill. Multiple monitors
 % are placed around the field of view of the subject to create an immersive
@@ -12,7 +12,7 @@
 % Behavioral data is saved locally every step and exported to a mat file at
 % the end of the recording session.
 % 
-% CircularMaze methods:
+% LinearMaze methods:
 %   blank  - Show blank for a given duration.
 %   delete - Release all resources.
 %   log    - Create a log entry using the same syntax as sprintf.
@@ -22,53 +22,66 @@
 %   start  - Send high pulse to trigger-out and enable behavior.
 %   stop   - Send low pulse to trigger-out and disable behavior.
 % 
-% CircularMaze properties:
+% LinearMaze properties:
 %   gain   - Forward speed factor in closed-loop when the rotary encoder produces movement.
 %   speed  - Forward speed in open-loop.
-%
+% 
 % Please note that these classes are in early stages and are provided "as is"
 % and "with all faults". You should test throughly for proper execution and
 % proper data output before running any behavioral experiments.
-% 
+%
 % Tested on MATLAB 2018a.
 % 
-% See also LinearMaze, TableTop, TwoChoice.
+% See also CircularMaze, TableTop, TwoChoice.
 
 % 2017-12-13. Leonardo Molina.
-% 2018-05-24. Last modified.
-classdef CircularMaze < handle
-    properties (Access = public)
+% 2018-05-24. Leonardo Molina.
+classdef LinearMaze < handle
+    properties
+        % intertrialBehavior - Whether to permit behavior during an intertrial.
+        intertrialBehavior = false;
+        
         % intertrial - Duration (s) of an intertrial when last node is reached.
-        intertrialDuration = 0
+        intertrialDuration = 1;
         
         % logOnChange - Create a log entry with every change in position or rotation.
-        logOnChange = false
+        logOnChange = false;
         
         % logOnFrame - Create a log entry with every trigger-input.
-        logOnFrame = true
+        logOnFrame = true;
         
         % logOnUpdate - Create a log entry at the frequency of the behavior controller.
-        logOnUpdate = true
+        logOnUpdate = true;
 		
         % rewardDuration - Duration (s) the reward valve remains open after a trigger.
-        rewardDuration = 0.050
+        rewardDuration = 0.040;
         
-        % scene - Name of an existing scene.
-        scene = 'Classroom'
+        % rewardTone - Frequency and duration of the tone during a reward.
+        rewardTone = [2000, 0.5];
+        
+        % tapeTrigger - Whether to initiate a new trial when photosensor
+        % detects a tape strip in the belt.
+        tapeTrigger = false;
         
         % treadmill - Arduino controlled apparatus.
         treadmill
     end
     
     properties (SetAccess = private)
-        % distance - Traveled distance over the path.
-        distance = 0
-        
         % filename - Name of the log file.
         filename
         
-        % position - Current x/z position.
-        position = [0, 0]
+        % scene - Name of an existing scene.
+        scene = 'Tunnel';
+		
+        % vertices - Vertices of the maze (x1, y1, x2, y2, ... in cm).
+        vertices = [0, -100, ...
+                    0,    0, ...
+                    0, 1000, ...
+                    0, -Inf];
+        
+        % resetNode - When resetNode is reached, re-start.
+        resetNode = 2;
     end
     
     properties (Dependent)
@@ -90,7 +103,7 @@ classdef CircularMaze < handle
         className
         
         % enabled - Whether to allow treadmill to cause movement.
-        enabled = false
+        enabled = false;
         
         % fid - Log file identifier.
         fid
@@ -102,17 +115,14 @@ classdef CircularMaze < handle
         
         mSpeed = 0;
         
+        % nodes - Nodes object for controlling behavior.
+        nodes
+        
         % offsets - Monitor rotation offset listed under monitors.
         offsets
         
         % pauseId - Process id for scheduling pauses.
         pauseId = 0
-        
-        % radius - Radius (cm) of the circular path.
-        radius = 38
-        
-        % rotation - Rotation of the camera.
-        rotation = 0
         
         % scheduler - Scheduler object for non-blocking pauses.
         scheduler
@@ -123,35 +133,36 @@ classdef CircularMaze < handle
         % startTime - Reference to time at start.
         startTime
         
+        % tapeControl - Control when to trigger a trial based on tape crossings.
+        tapeControl = [0 1]
+        
         % textBox - Textbox GUI.
         textBox
         
         % trial - Trial number.
         trial = 1
         
-        % vertices - Vertices of the maze (x1, y1, x2, y2, ... in cm).
-        vertices
-        
-        catDistance = 0
+        % update - Last string logged during an update operation.
+        update = ''
     end
     
     properties (Constant)
         % fps - Frames per seconds for time integration; should match VR game.
         fps = 50
         
-        % programVersion - Version of this function.
-        programVersion = '20180524'
+        % programVersion - Version of this class.
+        programVersion = '20180524';
     end
     
     methods
-        function obj = CircularMaze(varargin)
-            % CircularMaze()
+        function obj = LinearMaze(varargin)
+            % LinearMaze()
             %   Controller for a liner-maze.
-            % CircularMaze('com', comPortName, ...)
+            % LinearMaze('com', comPortName, ...)
             %   Provide the serial port name of the treadmill (rotary encoder, pinch valve,
             %   photo-sensor, and lick-sensors assumed connected to an Arduino microcontroller
             %   running a matching firmware).
-            % CircularMaze('monitors', {ip1, offset1, ip2, offset2, ...}, ...)
+            % LinearMaze('monitors', {ip1, offset1, ip2, offset2, ...}, ...)
             %   Provide IP address of each monitor tablet and rotation offset for each camera.
             
             keys = varargin(1:2:end);
@@ -174,22 +185,25 @@ classdef CircularMaze < handle
             obj.offsets = [monitors{2:2:end}];
             obj.sender = UDPSender(32000);
             
-            % Log file.
-            root = getenv('USERPROFILE');
-            folder = fullfile(root, 'Documents', 'VR');
-            if exist(folder, 'dir') ~= 7
-                mkdir(folder);
-            end
+            % Create a log file.
+            folder = fullfile(getenv('USERPROFILE'), 'Documents', 'VR');
             session = sprintf('VR%s', datestr(now, 'yyyymmddHHMMSS'));
             obj.filename = fullfile(folder, sprintf('%s.csv', session));
-            obj.fid = fopen(obj.filename, 'a');
-            obj.startTime = tic;
-                        
-            % Log program versions.
+            obj.fid = Files.open(obj.filename, 'a');
+            
+            % Remember version and session names.
             obj.startTime = tic;
             obj.className = mfilename('class');
-            obj.print('maze-version,%s-%s', obj.className, CircularMaze.programVersion);
+            obj.print('maze-version,%s-%s', obj.className, LinearMaze.programVersion);
+            obj.print('nodes-version,%s', Nodes.programVersion);
+            obj.print('treadmill-version,%s', ArduinoTreadmill.programVersion);
             obj.print('filename,%s', obj.filename);
+            
+            % Show blank.
+            obj.sender.send('enable,Blank,1;', obj.addresses);
+            
+            % Load an existing scene.
+            obj.sender.send(sprintf('scene,%s;', obj.scene), obj.addresses);
             
             % Initialize treadmill controller.
             if isempty(com)
@@ -197,10 +211,18 @@ classdef CircularMaze < handle
                 obj.print('treadmill-version,%s', TreadmillInterface.programVersion);
             else
                 obj.treadmill = ArduinoTreadmill(com);
-                obj.print('treadmill-version,%s', ArduinoTreadmill.programVersion);
+                obj.treadmill.bridge.register('ConnectionChanged', @obj.onBridge);
             end
             obj.treadmill.register('Frame', @obj.onFrame);
             obj.treadmill.register('Step', @obj.onStep);
+            obj.treadmill.register('Tape', @obj.onTape);
+            
+            % Initialize nodes.
+            obj.nodes = Nodes();
+            obj.nodes.register('Change', @(position, distance, yaw, rotation)obj.onChange(position, distance, yaw));
+            obj.nodes.register('Lap', @(lap)obj.onLap);
+            obj.nodes.register('Node', @obj.onNode);
+            obj.nodes.vertices = obj.vertices;
             
             % Release resources when the figure is closed.
             obj.figureHandle = figure('Name', mfilename('Class'), 'MenuBar', 'none', 'NumberTitle', 'off', 'DeleteFcn', @(~, ~)obj.delete());
@@ -215,18 +237,12 @@ classdef CircularMaze < handle
             obj.textBox = h(5);
             set(obj.figureHandle, 'Position', [obj.figureHandle.Position(1), obj.figureHandle.Position(2), 4 * p(3) + 2 * p(1), 2 * numel(h) * p(4)])
             
-            % Auto-start.
-            obj.speed = 15;
-            
-            % Load an existing scene.
-            obj.sender.send(sprintf('scene,%s;', obj.scene), obj.addresses);
-            
             obj.scheduler = Scheduler();
             obj.scheduler.repeat(@obj.onUpdate, 1 / obj.fps);
         end
         
         function blank(obj, duration)
-            % CircularMaze.pause(duration)
+            % LinearMaze.pause(duration)
             % Show blank for a given duration.
             
             obj.scheduler.stop(obj.blankId);
@@ -257,16 +273,17 @@ classdef CircularMaze < handle
         end
         
         function delete(obj)
-            % CircularMaze.delete()
+            % LinearMaze.delete()
             % Release all resources.
             
             obj.treadmill.trigger = false;
-            delete(obj.scheduler);
             delete(obj.treadmill);
+            delete(obj.scheduler);
+            delete(obj.nodes);
             delete(obj.sender);
             obj.log('note,delete');
             fclose(obj.fid);
-            CircularMaze.export(obj.filename);
+            LinearMaze.export(obj.filename);
             if ishandle(obj.figureHandle)
                 set(obj.figureHandle, 'DeleteFcn', []);
                 delete(obj.figureHandle);
@@ -274,14 +291,14 @@ classdef CircularMaze < handle
         end
         
         function log(obj, format, varargin)
-            % CircularMaze.log(format, arg1, arg2, ...)
+            % LinearMaze.log(format, arg1, arg2, ...)
             % Create a log entry using the same syntax as sprintf.
             
-            fprintf(obj.fid, '%.4f,%s\n', toc(obj.startTime), sprintf(format, varargin{:}));
+            fprintf(obj.fid, '%.2f,%s\n', toc(obj.startTime), sprintf(format, varargin{:}));
         end
         
         function pause(obj, duration)
-            % CircularMaze.pause(duration)
+            % LinearMaze.pause(duration)
             % Show blank and disable behavior for a given duration.
             
             obj.scheduler.stop(obj.pauseId);
@@ -296,7 +313,7 @@ classdef CircularMaze < handle
         end
         
         function print(obj, format, varargin)
-            % CircularMaze.print(format, arg1, arg2, ...)
+            % LinearMaze.print(format, arg1, arg2, ...)
             % Print on screen and create a log entry using the same syntax as sprintf.
             
             fprintf('[%.1f] %s\n', toc(obj.startTime), sprintf(format, varargin{:}));
@@ -304,10 +321,11 @@ classdef CircularMaze < handle
         end
         
         function reset(obj)
-            % CircularMaze.reset()
+            % LinearMaze.reset()
             % Reset trial, position, rotation, frame count and encoder steps.
             
             obj.trial = 1;
+            obj.nodes.vertices = obj.vertices;
             % Frame counts and steps are reset to zero.
             obj.treadmill.frame = 0;
             obj.treadmill.step = 0;
@@ -315,7 +333,7 @@ classdef CircularMaze < handle
         end
         
         function start(obj)
-            % CircularMaze.start()
+            % LinearMaze.start()
             % Send high pulse to trigger-out and enable behavior.
             
             % Load an existing scene.
@@ -334,7 +352,7 @@ classdef CircularMaze < handle
         end
         
         function stop(obj)
-            % CircularMaze.stop()
+            % LinearMaze.stop()
             % Send low pulse to trigger-out and disable behavior.
             
             % Show blank and disable external devices and behavior.
@@ -346,19 +364,70 @@ classdef CircularMaze < handle
     end
     
     methods (Access = private)
+        function newTrial(obj)
+            % LinearMaze.newTrial()
+            % Send a reward pulse, play a tone, log data, pause.
+            
+            obj.treadmill.reward(obj.rewardDuration);
+            Tools.tone(obj.rewardTone(1), obj.rewardTone(2));
+            
+            % Disable movement and show blank screen for the given duration.
+            if obj.intertrialBehavior
+                obj.blank(obj.intertrialDuration);
+            else
+                obj.pause(obj.intertrialDuration);
+            end
+            obj.log('data,%i,%i,%.2f,%.2f,%.2f,%.2f', obj.treadmill.frame, obj.treadmill.step, obj.nodes.distance, obj.nodes.yaw, obj.nodes.position(1), obj.nodes.position(2));
+            obj.trial = obj.trial + 1;
+            obj.print('trial,%i', obj.trial);
+        end
+        
+        function onBridge(obj, connected)
+            if connected
+                obj.print('note,Arduino connected.');
+            else
+                obj.print('note,Arduino disconnected.');
+            end
+        end
+        
+        function onChange(obj, position, distance, yaw)
+            % LinearMaze.onChange(position, distance, yaw)
+            % Update monitors with any change in position and rotation.
+            % Create an entry in the log file if logOnChange == true.
+            
+            obj.sender.send(Tools.compose([sprintf(...
+                'position,Main Camera,%.2f,1,%.2f;', position(1), position(2)), ...
+                'rotation,Main Camera,0,%.2f,0;'], yaw + obj.offsets), ...
+                obj.addresses);
+            
+            if obj.logOnChange
+                obj.log('data,%i,%i,%.2f,%.2f,%.2f,%.2f', obj.treadmill.frame, obj.treadmill.step, distance, yaw, position(1), position(2));
+            end
+        end
+        
         function onFrame(obj, frame)
-            % CircularMaze.onFrame(frame)
+            % LinearMaze.onFrame(frame)
             % The trigger input changed from low to high.
             % Create an entry in the log file if logOnFrame == true.
             
             % Log changes including frame count and rotary encoder changes.
             if obj.logOnFrame
-                obj.log('data,%i,%.2f,%.2f,%.2f,%.2f,%.2f', frame, obj.treadmill.step, obj.distance, obj.rotation, obj.position(1), obj.position(2));
+                obj.log('data,%i,%i,%.2f,%.2f,%.2f,%.2f', frame, obj.treadmill.step, obj.nodes.distance, obj.nodes.yaw, obj.nodes.position(1), obj.nodes.position(2));
             end
+            
+            % Change the name to reflect frame number.
+            set(obj.figureHandle, 'Name', sprintf('%s - Frame: %i', mfilename('Class'), frame));
+        end
+        
+        function onLap(obj)
+            % LinearMaze.onLap()
+            % Ran thru all nodes, disable motion during the intertrial.
+            
+            obj.newTrial();
         end
         
         function onLogButton(obj)
-            % CircularMaze.onLogButton()
+            % LinearMaze.onLogButton()
             % Log user text.
             
             if ~isempty(obj.textBox.String)
@@ -367,68 +436,69 @@ classdef CircularMaze < handle
             end
         end
         
+        function onTape(obj, forward)
+            % LinearMaze.onTape(state)
+            % Treadmill's photosensor detected a reflective tape in the belt.
+            
+            if obj.enabled && obj.tapeTrigger
+                if forward
+                    obj.tapeControl(1) = obj.tapeControl(1) + 1;
+                else
+                    obj.tapeControl(1) = obj.tapeControl(1) - 1;
+                end
+                if obj.tapeControl(1) == obj.tapeControl(2)
+                    obj.tapeControl(2) = obj.tapeControl(2) + 1;
+                    obj.newTrial();
+                end
+            end
+        end
+        
+        function onNode(obj, node)
+            % LinearMaze.onNode(node)
+            % Reached a reset node.
+            
+            if ~obj.tapeTrigger && ismember(node, obj.resetNode)
+                obj.nodes.vertices = obj.vertices;
+                obj.newTrial();
+            end
+        end
+        
         function onStep(obj, step)
-            % CircularMaze.onStep(step)
+            % LinearMaze.onStep(step)
             % The rotary encoder changed, update behavior if enabled
             % Create an entry in the log file otherwise.
             
-            if obj.enabled && obj.speed == 0
-                obj.pushCamera(step * obj.gain);
-
-                % Create an entry in the log file.
-                if obj.logOnChange
-                    obj.log('data,%i,%.2f,%.2f,%.2f,%.2f,%.2f', obj.treadmill.frame, obj.treadmill.step, obj.distance, obj.rotation, obj.position(1), obj.position(2));
-                end
+            if obj.enabled && obj.speed == 0 && ~obj.nodes.rotating
+                % Rotary encoder changes position unless open-loop speed is different than 0.
+                obj.nodes.push(step * obj.gain);
             end
         end
         
         function onUpdate(obj)
-            % CircularMaze.onUpdate()
+            % LinearMaze.onUpdate()
             % Create an entry in the log file if logOnUpdate == true.
             
-            if obj.enabled
-                % Move camera around the circle.
-                if obj.speed ~= 0
-                    % Open-loop updates position when open-loop speed is different 0.
-                    obj.pushCamera(obj.speed / obj.fps);
-                end
-                
-                % Log.
-                if obj.logOnUpdate
-                    obj.log('data,%i,%.2f,%.2f,%.2f,%.2f,%.2f', obj.treadmill.frame, obj.treadmill.step, obj.distance, obj.rotation, obj.position(1), obj.position(2));
+            if obj.speed ~= 0 && obj.enabled && ~obj.nodes.rotating
+                % Open-loop updates position when open-loop speed is different 0.
+                obj.nodes.push(obj.speed / obj.nodes.fps);
+            end
+            
+            if obj.logOnUpdate
+                str = sprintf('data,%i,%i,%.2f,%.2f,%.2f,%.2f', obj.treadmill.frame, obj.treadmill.step, obj.nodes.distance, obj.nodes.yaw, obj.nodes.position(1), obj.nodes.position(2));
+                if ~strcmp(str, obj.update)
+                    obj.update = str;
+                    obj.log(str);
                 end
             end
-                
-            % Move cat around a smaller circle.
-            obj.catDistance = obj.catDistance - 0.5 * obj.speed / obj.fps;
-            r = 1.025 * obj.radius;
-            theta = obj.catDistance / r;
-            pos = r * [sin(theta), cos(theta)];
-            rot = 90 + atan2(pos(1), pos(2)) / pi * 180;
-            obj.sender.send(sprintf('position,Cat,%.2f,%.2f,%.2f;rotation,Cat,0,%.2f,0;', pos(1), sin(45 * theta) + 1.5, pos(2), rot), obj.addresses);
-        end
-        
-        function pushCamera(obj, change)
-            obj.distance = obj.distance + change;
-            theta = obj.distance / obj.radius;
-            obj.position = obj.radius * [sin(theta), cos(theta)];
-
-            % Update monitors with any change in position and rotation.
-            % Always head tangent to the circle.
-            obj.rotation = 90 + atan2(obj.position(1), obj.position(2)) / pi * 180;
-            obj.sender.send(Tools.compose([sprintf(...
-                'position,Main Camera,%.2f,1,%.2f;', obj.position(1), obj.position(2)), ...
-                'rotation,Main Camera,0,%.2f,0;'], obj.rotation + obj.offsets), ...
-                obj.addresses);
         end
     end
     
     methods (Static)
         function export(filename)
-            % CircularMaze.export(filename)
+            % LinearMaze.export(filename)
             % Convert log file to a mat file.
             
-            header = {'time (s)', 'frame', 'encoder-step (cm)', 'unfolded-distance (cm)', 'y-rotation (degrees)', 'x-position (cm)', 'z-position (cm)'};
+            header = {'time (s)', 'frame', 'encoder-step', 'unfolded-distance (cm)', 'y-rotation (degrees)', 'x-position (cm)', 'z-position (cm)'};
             data = str2double(CSV.parse(CSV.load(filename), [-1 1:6], 'data'));
             [folder, filename] = fileparts(filename);
             save(fullfile(folder, sprintf('%s.mat', filename)), 'header', 'data');

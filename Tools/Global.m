@@ -1,4 +1,5 @@
 % Global - Organized access to variables in the global scope.
+% 
 % Global methods:
 %   contains - Test whether global keys exist.
 %   get      - Return the value associated to a global key.
@@ -6,7 +7,7 @@
 %   set      - Set a value associated to a global key.
 
 % 2017-12-26. Leonardo Molina.
-% 2018-05-04. Last modified.
+% 2018-05-21. Last modified.
 classdef Global
     methods (Static)
         function result = get(key, default)

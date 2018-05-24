@@ -4,12 +4,12 @@
 % 
 % Convenient event notification mechanism which accepts any delegate, as 
 % opposed to MATLAB's event mechanism which expects recipients with one type
-% of argument, a child of event.EventData.
+% of argument (a child of event.EventData).
 % 
 % See also Callbacks.invoke.
 
 % 2018-03-08. Leonardo Molina.
-% 2018-05-01. Last modified.
+% 2018-05-21. Last modified.
 classdef Event < handle
     properties (Access = private)
         map = cell(3, 0)
@@ -34,6 +34,9 @@ classdef Event < handle
     
     methods (Hidden)
         function unregister(obj, ids)
+            % Event.unregister(ids)
+            % Remove previously registered callbacks.
+            
             uids = [obj.map{1, :}];
             k = ismember(uids, ids);
             obj.map(:, k) = [];
