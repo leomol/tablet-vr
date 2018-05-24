@@ -1,5 +1,3 @@
-v0.1.0
-
 # Tablet VR
 Controller for virtual reality tasks for execution of arbitrary experimental paradigms. The virtual environments (aka scenes) are displayed in a number of monitor tablets around the field of view of the subject.
 
@@ -73,34 +71,34 @@ Add <java-installation-path>/bin to the System Enviroment Variables.
 
 ### Example 1
 ```matlab
-	obj = CircularMaze();
-	obj.start();
+obj = CircularMaze();
+obj.start();
 ```
 
 ### Example 2
 ```matlab
-	obj = LinearMaze();
-	obj.start();
-	obj.speed = 15;
-	pause(3);
-	obj.speed = 1;
+obj = LinearMaze();
+obj.start();
+obj.speed = 15;
+pause(3);
+obj.speed = 1;
 ```
 
 ### Example 3
 ```matlab
-	sender = UDPSender(32000);
-	sender.send('scene,Classroom;enable,Menu,0;', '127.0.0.1');
-	for i = 1:10
-		Tools.tone(1250, 0.5);
-		sender.send('enable,Blank,1;', '127.0.0.1');
-		pause(0.25);
-		
-		sender.send(sprintf('rotation,Main Camera,0,%.2f,0;', 360 * rand), '127.0.0.1');
-		
-		Tools.tone(2250, 0.5);
-		sender.send('enable,Blank,0;', '127.0.0.1');
-		pause(1);
-	end
+sender = UDPSender(32000);
+sender.send('scene,Classroom;enable,Menu,0;', '127.0.0.1');
+for i = 1:10
+	Tools.tone(1250, 0.5);
+	sender.send('enable,Blank,1;', '127.0.0.1');
+	pause(0.25);
+	
+	sender.send(sprintf('rotation,Main Camera,0,%.2f,0;', 360 * rand), '127.0.0.1');
+	
+	Tools.tone(2250, 0.5);
+	sender.send('enable,Blank,0;', '127.0.0.1');
+	pause(1);
+end
 ```
 
 ## API Reference
