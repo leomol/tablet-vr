@@ -69,13 +69,13 @@ Add <java-installation-path>/bin to the System Environment Variables.
 * Run the examples below.
 * After each example, type `delete(obj);` to release resources.
 
-### Example 1
+### Example 1 - Reuse task controller.
 ```matlab
 obj = CircularMaze();
 obj.start();
 ```
 
-### Example 2
+### Example 2 - Reuse task controller.
 ```matlab
 obj = LinearMaze();
 obj.start();
@@ -84,17 +84,19 @@ pause(3);
 obj.speed = 1;
 ```
 
-### Example 3
+### Example 3 - Interact at a lower level.
 ```matlab
+% Messages are communicated via UDP packages on port 32000.
 sender = UDPSender(32000);
 sender.send('scene,Classroom;enable,Menu,0;', '127.0.0.1');
 for i = 1:10
+	% Play a tone, show a blank, and pause.
 	Tools.tone(1250, 0.5);
 	sender.send('enable,Blank,1;', '127.0.0.1');
 	pause(0.25);
-	
+	% Rotate camera randomly.
 	sender.send(sprintf('rotation,Main Camera,0,%.2f,0;', 360 * rand), '127.0.0.1');
-	
+	% Play another tone, hide blank, and pause.
 	Tools.tone(2250, 0.5);
 	sender.send('enable,Blank,0;', '127.0.0.1');
 	pause(1);
@@ -102,14 +104,15 @@ end
 ```
 
 ## API Reference
-In MATLAB type help followed by the name of any Class (files copied to Documents/MATLAB). Most class list methods and properties with links to expand the description. For example, `help LinearMaze`.
+While these libraries acquire a better shape, look at the documentation from within MATLAB: Type help followed by the name of any class (those files copied to Documents/MATLAB). Most classes list methods and properties with links that expand their description. For example type `help LinearMaze`.
 
 ## Version History
-### 0.1.0
-* Initial Release: Library and example code
+### 0.2.0
 * TreadmillMaze.m moved to LinearMaze.m
 * Tracker/GUI.m moved to Tracker.m
 * Arguments to LinearMaze.m and CircleMaze.m are passed as key-value pairs, e.g., `CircleMaze('com', 'COM4', 'monitors', {'127.0.0.1', 0, '192.168.1.100', 90})`
+### 0.1.0
+* Initial Release: Library and example code
 
 ## License
 © 2018 [Leonardo Molina][Leonardo Molina]
