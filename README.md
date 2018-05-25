@@ -107,11 +107,10 @@ end
 While these libraries acquire a better shape, look at the documentation from within MATLAB: Type help followed by the name of any class (those files copied to Documents/MATLAB). Most classes list methods and properties with links that expand their description. For example type `help LinearMaze`.
 
 ## Version History
-### 0.2.0
+### 0.1.0
 * TreadmillMaze.m moved to LinearMaze.m
 * Tracker/GUI.m moved to Tracker.m
 * Arguments to LinearMaze.m and CircleMaze.m are passed as key-value pairs, e.g., `CircleMaze('com', 'COM4', 'monitors', {'127.0.0.1', 0, '192.168.1.100', 90})`
-### 0.1.0
 * Initial Release: Library and example code
 
 ## License
