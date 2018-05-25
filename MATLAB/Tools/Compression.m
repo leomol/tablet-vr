@@ -8,7 +8,7 @@
 %   extract    - Extract a number from a subset of bits from another number.
 
 % 2016-12-01. Leonardo Molina.
-% 2018-05-03. Last modification.
+% 2018-05-25. Last modified.
 classdef Compression
     methods (Static)
         function bytes = compress(numbers, sizes)

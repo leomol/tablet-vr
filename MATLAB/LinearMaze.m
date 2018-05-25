@@ -35,7 +35,7 @@
 % See also CircularMaze, TableTop, TwoChoice.
 
 % 2017-12-13. Leonardo Molina.
-% 2018-05-24. Leonardo Molina.
+% 2018-05-25. Leonardo Molina.
 classdef LinearMaze < handle
     properties
         % intertrialBehavior - Whether to permit behavior during an intertrial.
@@ -97,7 +97,7 @@ classdef LinearMaze < handle
         addresses
         
         % blankId - Process id for scheduling blank periods.
-        blankId = 0
+        blankId
         
         % className - Name of this class.
         className
@@ -122,7 +122,7 @@ classdef LinearMaze < handle
         offsets
         
         % pauseId - Process id for scheduling pauses.
-        pauseId = 0
+        pauseId
         
         % scheduler - Scheduler object for non-blocking pauses.
         scheduler
@@ -151,7 +151,7 @@ classdef LinearMaze < handle
         fps = 50
         
         % programVersion - Version of this class.
-        programVersion = '20180524';
+        programVersion = '20180525';
     end
     
     methods
@@ -245,7 +245,7 @@ classdef LinearMaze < handle
             % LinearMaze.pause(duration)
             % Show blank for a given duration.
             
-            obj.scheduler.stop(obj.blankId);
+            Objects.delete(obj.blankId);
             if duration == 0
                 obj.sender.send('enable,Blank,0;', obj.addresses);
             elseif duration > 0
@@ -301,7 +301,7 @@ classdef LinearMaze < handle
             % LinearMaze.pause(duration)
             % Show blank and disable behavior for a given duration.
             
-            obj.scheduler.stop(obj.pauseId);
+            Objects.delete(obj.pauseId);
             if duration == 0
                 obj.enabled = true;
                 obj.sender.send('enable,Blank,0;', obj.addresses);

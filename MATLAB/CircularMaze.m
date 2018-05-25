@@ -35,7 +35,7 @@
 % See also LinearMaze, TableTop, TwoChoice.
 
 % 2017-12-13. Leonardo Molina.
-% 2018-05-24. Last modified.
+% 2018-05-25. Last modified.
 classdef CircularMaze < handle
     properties (Access = public)
         % intertrial - Duration (s) of an intertrial when last node is reached.
@@ -84,7 +84,7 @@ classdef CircularMaze < handle
         addresses
         
         % blankId - Process id for scheduling blank periods.
-        blankId = 0
+        blankId
         
         % className - Name of this class.
         className
@@ -106,7 +106,7 @@ classdef CircularMaze < handle
         offsets
         
         % pauseId - Process id for scheduling pauses.
-        pauseId = 0
+        pauseId
         
         % radius - Radius (cm) of the circular path.
         radius = 38
@@ -140,7 +140,7 @@ classdef CircularMaze < handle
         fps = 50
         
         % programVersion - Version of this function.
-        programVersion = '20180524'
+        programVersion = '20180525'
     end
     
     methods
@@ -229,7 +229,7 @@ classdef CircularMaze < handle
             % CircularMaze.pause(duration)
             % Show blank for a given duration.
             
-            obj.scheduler.stop(obj.blankId);
+            Objects.delete(obj.blankId);
             if duration == 0
                 obj.sender.send('enable,Blank,0;', obj.addresses);
             elseif duration > 0
@@ -284,7 +284,7 @@ classdef CircularMaze < handle
             % CircularMaze.pause(duration)
             % Show blank and disable behavior for a given duration.
             
-            obj.scheduler.stop(obj.pauseId);
+            Objects.delete(obj.pauseId);
             if duration == 0
                 obj.enabled = true;
                 obj.sender.send('enable,Blank,0;', obj.addresses);

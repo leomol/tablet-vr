@@ -6,7 +6,7 @@
 %   void   - Generic function with arbitrary number of inputs and outputs.
 
 % 2016-05-12. Leonardo Molina.
-% 2018-05-21. Last modified.
+% 2018-05-24. Last modified.
 classdef Callbacks
     methods (Static)
         function invoke(varargin)
@@ -22,26 +22,14 @@ classdef Callbacks
             % as being synchronous).
             % 
             % Examples:
-            %   invoke(@fprintf, '%s %s\n', 'Hello', 'world')
-            %   invoke({@fprintf, '%s %s %s\n', 'Hello', 'world'}, '!')
-            %   
-            %   MyClass.m:
-            %     classdef MyClass < handle
-            %         methods
-            %             function call(obj)
-            %                 disp('Hello world');
-            %             end
-            %         end
-            %     end
-            %   
-            %   test.m:
-            %     myObject = MyClass();
-            %     Callbacks.invoke(@myObject.call());
-            %     Callbacks.invoke(myObject, 'call');
-            %     delete(myObject);
-            %     Callbacks.invoke(myObject, 'call');
-            %   
-            %   test();
+            %   Callbacks.invoke(@fprintf, '%s %s\n', 'Hello', 'world')
+            %   Callbacks.invoke({@fprintf, '%s %s %s\n', 'Hello', 'world'}, '!')
+            %  
+            %   t = timer('TimerFcn', @(~, ~)disp('Tic'));
+            %   Callbacks.invoke(@t.start);
+            %   Callbacks.invoke(t, 'start');
+            %   delete(t);
+            %   Callbacks.invoke(t, 'start');
             if iscell(varargin{1})
                 % invoke({...}, ...)
                 args = [varargin{1} varargin(2:end)];

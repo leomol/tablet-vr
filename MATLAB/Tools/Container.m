@@ -1,60 +1,67 @@
-% Container
-% Facilitate data exchange from event listeners.
+% Container - Facilitate data exchange from event listeners.
+% 
 % Container methods:
 %   set - Set or update dynamic properties in the container object.
+% 
+% Example:
+%   container = Container('field1', 1, 'field2', 1:5);
+%   container.set('greeting', 'Hello world');
+%   disp(container.field1);
+%   disp(container.field2);
+%   disp(container.greeting);
 
 % 2016-05-12. Leonardo Molina.
-% 2018-05-09. Last modified.
+% 2018-05-25. Last modified.
 classdef Container < dynamicprops & event.EventData
     methods
         function obj = Container(varargin)
-            % Container(key1, value1, key2, value2, ...)
+            % Container(field1, value1, field2, value2, ...)
             % Returns a Container object.
             % Set dynamic properties in the container object.
             %
             % Example: 
-            %   container = Container('tag1', 1, ...)
-            %   container.tag1 %==> 1
+            %   container = Container('field1', 1, ...)
+            %   container.field1 %==> 1
             % 
             % See also Container.set.
             obj.set(varargin{:});
         end
         
         function set(obj, varargin)
-            % Container.set(key1, value1, key2, value2, ...)
+            % Container.set(field1, value1, field2, value2, ...)
             % Set dynamic properties in the container object, if a property
             % already exists, modify its value.
             % 
-            % Example:
+            % Example 1:
             %   container = Container();
-            %   container.set('tag1', 1, 'tag2', 1:5, 'anotherTag', {'Hello', 123});
-            %   container.tag1 %==> 1
+            %   container.set('field1', 1, 'field2', 1:5, 'anotherTag', {'Hello', 123});
+            %   container.field1 %==> 1
             % 
-            %  MyClass.m:
-            %     classdef MyClass < handle
-            %         events
-            %             MessageReceived;
-            %         end
+            % Example 2:
+            % Create TestClass.m:
+            %   classdef TestClass < handle
+            %       events
+            %           Called;
+            %       end
             % 
-            %         methods
-            %             function call(obj)
-            %                 notify(obj, 'MessageReceived', Container('Message', 'Hello world'));
-            %             end
-            %         end
-            %     end
+            %       methods (Access = private)
+            %           function call(obj)
+            %               obj.notify('Called', Container('Greeting', 'Hello world', 'Field2', 2, 'Field3', 1:5));
+            %           end
+            %        end
+            %       
+            %       methods (Static)
+            %           function test()
+            %               testObject = TestClass();
+            %               addlistener(testObject, 'Called', @(source, event)disp(event.Greeting));
+            %               testObject.call();
+            %           end
+            %       end
+            %   end
             % 
-            %  test.m:
-            %     function test()
-            %         myObject = MyClass();
-            %         addlistener(myObject, 'MessageReceived', @printMessage);
-            %         myObject.call();
-            %     end
-            % 
-            %     function printMessage(container)
-            %         disp(container.Message);
-            %     end
-            %  
-            %  test();
+            % Then execute:
+            %   TestClass.Test();
+            
             n = numel(varargin);
             for i = 1:2:n
                 if ~isprop(obj, varargin{i})

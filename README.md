@@ -87,24 +87,24 @@ obj.speed = 1;
 ### Example 3 - Interact at a lower level
 ```matlab
 % Messages are communicated via UDP packages on port 32000.
-sender = UDPSender(32000);
-sender.send('scene,Classroom;enable,Menu,0;', '127.0.0.1');
+obj = UDPSender(32000);
+obj.send('scene,Classroom;enable,Menu,0;', '127.0.0.1');
 for i = 1:10
 	% Play a tone, show a blank, and pause.
 	Tools.tone(1250, 0.5);
-	sender.send('enable,Blank,1;', '127.0.0.1');
+	obj.send('enable,Blank,1;', '127.0.0.1');
 	pause(0.25);
 	% Rotate camera randomly.
-	sender.send(sprintf('rotation,Main Camera,0,%.2f,0;', 360 * rand), '127.0.0.1');
+	obj.send(sprintf('rotation,Main Camera,0,%.2f,0;', 360 * rand), '127.0.0.1');
 	% Play another tone, hide blank, and pause.
 	Tools.tone(2250, 0.5);
-	sender.send('enable,Blank,0;', '127.0.0.1');
+	obj.send('enable,Blank,0;', '127.0.0.1');
 	pause(1);
 end
 ```
 
 ## API Reference
-While these libraries acquire a better shape, look at the documentation from within MATLAB: Type help followed by the name of any class (those files copied to Documents/MATLAB). Most classes list methods and properties with links that expand their description. For example type `help LinearMaze`.
+While these libraries acquire better shape, read their documentation from within MATLAB by typing help followed by the name of any class (those files copied to Documents/MATLAB). Most classes list methods and properties with links that expand their description. For example, type `help LinearMaze`.
 
 ## Version History
 ### 0.1.0
