@@ -69,13 +69,13 @@ Add <java-installation-path>/bin to the System Environment Variables.
 * Run the examples below.
 * After each example, type `delete(obj);` to release resources.
 
-### Example 1 - Reuse task controller.
+### Example 1 - Reuse task controller
 ```matlab
 obj = CircularMaze();
 obj.start();
 ```
 
-### Example 2 - Reuse task controller.
+### Example 2 - Reuse task controller
 ```matlab
 obj = LinearMaze();
 obj.start();
@@ -84,7 +84,7 @@ pause(3);
 obj.speed = 1;
 ```
 
-### Example 3 - Interact at a lower level.
+### Example 3 - Interact at a lower level
 ```matlab
 % Messages are communicated via UDP packages on port 32000.
 sender = UDPSender(32000);
@@ -130,4 +130,4 @@ This project is licensed under the [GNU GPLv3 License][LICENSE.md].
 [Unity package]: bin/TabletVR.unitypackage
 [TabletVR.exe]: bin/TabletVR.exe
 [TabletVR.apk]: bin/TabletVR.apk
-[upload-firmware.vbs]: bin/upload-firmware.vbs
+[upload-firmware.vbs]: Arduino/upload-firmware.vbs
