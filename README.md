@@ -1,10 +1,10 @@
 # Tablet VR
-Controller for virtual reality tasks for execution of arbitrary experimental paradigms. The virtual environments (aka scenes) are displayed in a number of monitor tablets around the field of view of the subject.
+Controller for virtual reality tasks for execution of arbitrary experimental paradigms. The virtual environments (aka scenes) are displayed in several monitor tablets around the field of view of the subject.
 
 ![alt text](http://www.interphaser.com/images/content/smoothwalk-hardware-setup-labeled.png "Tablet based VR")
 
 ## Getting Started
-Here's a short video showing how to run an example, assuming you fullfill the prerequisites:
+Here's a short video showing how to run an example, assuming you fulfill the prerequisites:
 [Getting started]
 
 ## Prerequisites
@@ -41,7 +41,7 @@ Code was last built and tested with
 
 * If creating new scenes
 	* Install Java SDK.
-Add <java-installation-path>/bin to the System Enviroment Variables.
+Add <java-installation-path>/bin to the System Environment Variables.
 	* Install Android Studio.
 	* Install Unity, adding support for Android.
 	* Open Unity and create a new project.
@@ -105,12 +105,11 @@ end
 In MATLAB type help followed by the name of any Class (files copied to Documents/MATLAB). Most class list methods and properties with links to expand the description. For example, `help LinearMaze`.
 
 ## Version History
-### 0.2
+### 0.1.0
+* Initial Release: Library and example code
 * TreadmillMaze.m moved to LinearMaze.m
 * Tracker/GUI.m moved to Tracker.m
 * Arguments to LinearMaze.m and CircleMaze.m are passed as key-value pairs, e.g., `CircleMaze('com', 'COM4', 'monitors', {'127.0.0.1', 0, '192.168.1.100', 90})`
-### 0.1
-* Initial Release: Library and example code
 
 ## License
 © 2018 [Leonardo Molina][Leonardo Molina]
