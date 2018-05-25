@@ -8,7 +8,7 @@ Here's a short video showing how to run an example, assuming you fullfill the pr
 [Getting started]
 
 ## Prerequisites
-* MATLAB.
+* [MATLAB][MATLAB]
 * If using scenes provided
 	* [TabletVR.exe][TabletVR.exe]
 * Otherwise, if compiling new scenes
@@ -120,6 +120,7 @@ This project is licensed under the [GNU GPLv3 License][LICENSE.md].
 [Java SDK]: http://www.oracle.com/technetwork/java/javase/downloads/index.html
 [Unity 3D]: https://unity3d.com/unity
 [Android Studio]: https://developer.android.com/studio
+[MATLAB]: https://www.mathworks.com/downloads/
 
 [Getting started]: https://drive.google.com/open?id=1PznYQcsR23NS4EQ-l4tKz5mKU-1TjS-7
 [Leonardo Molina]: https://github.com/leomol
