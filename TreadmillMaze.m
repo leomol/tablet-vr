@@ -433,6 +433,7 @@ classdef TreadmillMaze < handle
                     obj.update = str;
                     obj.log(str);
                 end
+            
             end
         end
         

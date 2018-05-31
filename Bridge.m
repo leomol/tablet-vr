@@ -7,7 +7,7 @@
 %   delete      - Stop connection and release the serial port resource.
 %   getBinary   - Listen to binary changes produced by variations in voltage.
 %   getContact  - Listen to binary changes produced by variations in capacitance.
-%   getCount    - Get the number of times a pin was a in a given state.
+%   getCount    - Get the number of times a pin was in a given state.
 %   getLevel    - Listen to 8-bit changes produced by variations in voltage.
 %   getRotation - Listen to updates from a rotary encoder.
 %   getThrehold - Listen to binary changes produced by variations in voltage around a threshold.
