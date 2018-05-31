@@ -38,7 +38,8 @@ classdef linearMaze < handle
     
     properties (SetAccess = private)
         % com - Serial port name.
-        com = 'COM3';
+        com %= 'COM3';%runningWheel
+        %com2 = 'COM4';%steeringWheel
         
         % filename - Name of the log file.
         filename
@@ -56,7 +57,7 @@ classdef linearMaze < handle
 %                     0, -Inf];
         vertices = [0, -100,...
                     0, -45,...
-                    -35, 0];%this node will either be left or right fork
+                    -35, 0];%this node will either be left or right fork on random movie mode or trigger
         
         % resetNode - When resetNode is reached, re-start.
         resetNode = 3;
@@ -88,7 +89,7 @@ classdef linearMaze < handle
         
         mGain = 1;
         
-        mSpeed = 50;
+        mSpeed = 0;
         
         % nodes - Nodes object for controlling behavior.
         nodes
@@ -124,6 +125,8 @@ classdef linearMaze < handle
     properties (Constant)
         % programVersion - Version of this class.
         programVersion = '20180515';
+        
+        hardware = 2; %1:off, 2:running 3:steering 4:both
     end
     
     methods
@@ -134,6 +137,7 @@ classdef linearMaze < handle
             
             if nargin == 0
                 com = [];
+                
             end
             
             % Create a log file.
@@ -161,14 +165,17 @@ classdef linearMaze < handle
             % Load an existing scene.
             obj.sender.send(sprintf('scene,%s;', obj.scene), obj.addresses);
             
-            % Initialize treadmill controller.
-            if isempty(com)
+            %Initialize treadmill controller.
+             if isempty(com)
+                %all hardware off
                 obj.treadmill = PretendTreadmill();
                 obj.print('treadmill-version,%s', PretendTreadmill.programVersion);
-            else
+             else%   if obj.hardware == 2 
+                %some or all hardware on
                 obj.treadmill = ArduinoTreadmill(obj.com);
-                obj.treadmill.bridge.register('ConnectionChanged', @obj.onBridge);
-            end
+                obj.treadmill.bridge.register('ConnectionChanged', @obj.onBridge); 
+             end
+            
             obj.treadmill.register('Frame', @obj.onFrame);
             obj.treadmill.register('Step', @obj.onStep);
             obj.treadmill.register('Tape', @obj.onTape);
@@ -426,9 +433,15 @@ classdef linearMaze < handle
             % The rotary encoder changed, update behavior if enabled
             % Create an entry in the log file otherwise.
             
+            %here is where we can convert forward or backward movement to
+            %rotation about y-axis:
+            %change yRotation here
+            
             if obj.speed == 0 && obj.enabled && ~obj.nodes.rotating
                 % Rotary encoder changes position unless open-loop speed is different than 0.
                 obj.nodes.push(step * obj.gain);
+                
+                %obj.sender.send(sprintf('rotation,Main Camera,0,%.2f,0;', yRotation), obj.addresses);
             end
         end
         

@@ -5,6 +5,7 @@
 % modify their state are listed below.
 % 
 % Bridge methods:
+<<<<<<< HEAD:MATLAB/Bridge.m
 %   delete       - Stop connection and release the serial port resource.
 %   getBinary    - Listen to binary changes produced by variations in voltage.
 %   getContact   - Listen to binary changes produced by variations in capacitance.
@@ -20,6 +21,23 @@
 %   setTone      - Play a tone with a given frequency and duration.
 %   stopGet      - Stop listening to changes from an input pin.
 %   stopSet      - Stop the output routine on an output pin.
+=======
+%   delete      - Stop connection and release the serial port resource.
+%   getBinary   - Listen to binary changes produced by variations in voltage.
+%   getContact  - Listen to binary changes produced by variations in capacitance.
+%   getCount    - Get the number of times a pin was in a given state.
+%   getLevel    - Listen to 8-bit changes produced by variations in voltage.
+%   getRotation - Listen to updates from a rotary encoder.
+%   getThrehold - Listen to binary changes produced by variations in voltage around a threshold.
+%   getValue    - Get the current value accumulated for a pin.
+%   setAddress  - Change the 8-bit value of the given 8-bit CPU address.
+%   setBinary   - Change the binary state of an output pin.
+%   setChirp    - Set a square wave with variable frequency.
+%   setPulse    - Set a square wave with fixed frequency.
+%   setTone     - Play a tone with a given frequency and duration.
+%   stopGet     - Stop listening to changes from an input pin.
+%   stopSet     - Stop the output routine on an output pin.
+>>>>>>> lineartrack and arduino controls:Bridge.m
 % 
 % Units of time parameters such as pulse duration and debounce durations
 % are expected in microseconds, as an integer value in the range Bridge.durationRange.
