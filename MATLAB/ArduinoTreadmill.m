@@ -45,7 +45,7 @@ classdef ArduinoTreadmill < Event
         
         %directionalDelta - directional increment for each step of the
         %rotary encoder
-        directionalDelta
+        %directionalDelta
         
         % encoderPins - Arduino pins where the rotary encoder is attached to.
         encoderPins = [2, 4]
@@ -75,14 +75,14 @@ classdef ArduinoTreadmill < Event
     methods
         function obj = ArduinoTreadmill(com)
             % ArduinoTreadmill(com)
-<<<<<<< HEAD:MATLAB/ArduinoTreadmill.m
+
             % - Connect to an Arduino at the given COM port running a matching
             %   firmware.
             % - Setup rotary encoder to report forward movement.
-=======
+
             % - Connect to an Arduino at the given COM port to set up the
             % - rotary encoder to report forward movement and directional movement.
->>>>>>> lineartrack and arduino controls:ArduinoTreadmill.m
+
             
             % Connect to the Arduino and setup listeners.
             obj.bridge = Bridge(com);
@@ -140,12 +140,14 @@ classdef ArduinoTreadmill < Event
                 obj.bridge.getBinary(obj.tapePin, 0, 0, 1);
             end
         end
-        
+%         function GetStep()
+%             obj.step
+%         end
         function onDataReceived(obj, data)
             % Treadmill.onDataReceived(data)
             % Bridge responded with position data.
-            switch data.Pin
-                case obj.encoderPins(1)
+%             switch data.Pin
+%                 case obj.encoderPins(1)
                     % Encoder detected a rotation.
                     if data.State
                         obj.change = +1;
@@ -154,19 +156,18 @@ classdef ArduinoTreadmill < Event
                     end
                     obj.step = obj.step + obj.change
                     obj.invoke('Step', obj.change * obj.delta)
-                case obj.framePin
-                    if data.State
-                        % Camera frames create an entry in the log file.
-                        obj.frame = obj.frame + 1;
-                        % Report current state.
-                        obj.invoke('Frame', obj.frame);
-                    end
-                case obj.tapePin
-                    % Report a change induced by the reflective tape.
-                    if ~data.State
-                        obj.invoke('Tape', obj.change > 0);
-                    end
+%                 case obj.framePin
+%                     if data.State
+%                         % Camera frames create an entry in the log file.
+%                         obj.frame = obj.frame + 1;
+%                         % Report current state.
+%                         obj.invoke('Frame', obj.frame);
+%                     end
+%                 case obj.tapePin
+%                     % Report a change induced by the reflective tape.
+%                     if ~data.State
+%                         obj.invoke('Tape', obj.change > 0);
+%                     end
             end
-        end
     end
 end
