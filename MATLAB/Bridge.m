@@ -5,6 +5,7 @@
 % modify their state are listed below.
 % 
 % Bridge methods:
+
 %   delete       - Stop connection and release the serial port resource.
 %   getBinary    - Listen to binary changes produced by variations in voltage.
 %   getContact   - Listen to binary changes produced by variations in capacitance.
@@ -20,7 +21,7 @@
 %   setTone      - Play a tone with a given frequency and duration.
 %   stopGet      - Stop listening to changes from an input pin.
 %   stopSet      - Stop the output routine on an output pin.
-% 
+
 % Units of time parameters such as pulse duration and debounce durations
 % are expected in microseconds, as an integer value in the range Bridge.durationRange.
 % 

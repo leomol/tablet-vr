@@ -144,24 +144,27 @@ classdef CircularMaze < handle
     end
     
     methods
+        
+        
         function obj = CircularMaze(varargin)
             % CircularMaze()
             %   Controller for a liner-maze.
-            % CircularMaze('com', comPortName, ...)
+            %  CircularMaze('com', 'com5')
             %   Provide the serial port name of the treadmill (rotary encoder, pinch valve,
             %   photo-sensor, and lick-sensors assumed connected to an Arduino microcontroller
             %   running a matching firmware).
             % CircularMaze('monitors', {ip1, offset1, ip2, offset2, ...}, ...)
             %   Provide IP address of each monitor tablet and rotation offset for each camera.
+            %list = ['com', 'com5']
             
             keys = varargin(1:2:end);
             values = varargin(2:2:end);
             k = find(strcmpi(keys, 'com'), 1);
-            if isempty(k)
-                com = [];
-            else
-                com = values{k};
-            end
+%             if isempty(k)
+%                 com = [];
+%             else
+                 com = 'com5' %values{k};
+%             end
             k = find(strcmpi(keys, 'monitors'), 1);
             if isempty(k)
                 monitors = {'127.0.0.1', 0};
@@ -193,10 +196,12 @@ classdef CircularMaze < handle
             
             % Initialize treadmill controller.
             if isempty(com)
+                
                 obj.treadmill = TreadmillInterface();
                 obj.print('treadmill-version,%s', TreadmillInterface.programVersion);
             else
-                obj.treadmill = ArduinoTreadmill(com);
+                
+                obj.treadmill = ArduinoTreadmill(com)
                 obj.print('treadmill-version,%s', ArduinoTreadmill.programVersion);
             end
             obj.treadmill.register('Frame', @obj.onFrame);
@@ -390,7 +395,7 @@ classdef CircularMaze < handle
                 % Move camera around the circle.
                 if obj.speed ~= 0
                     % Open-loop updates position when open-loop speed is different 0.
-                    obj.pushCamera(obj.speed / obj.fps);
+                    obj.pushCamera(obj.speed / obj.fps);%obj.step);
                 end
                 
                 % Log.
