@@ -172,7 +172,7 @@ classdef LinearMaze < handle
         % programVersion - Version of this class.
         programVersion = '20180525';
         
-        hardware =2;%0:no hardware, 1:runningWheel(noSteering), 2:steeringOnly, 3: all hardware on
+        hardware =0;%0:no hardware, 1:runningWheel(noSteering), 2:steeringOnly, 3: all hardware on
         
         
         
