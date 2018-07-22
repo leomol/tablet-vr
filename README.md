@@ -5,7 +5,7 @@ Controller for virtual reality tasks for execution of arbitrary experimental par
 
 ## Getting Started
 Here's a short video showing how to run an example, assuming you fulfill the prerequisites:
-[Getting started]
+[![Circle maze demo](circle-maze-demo.png)](https://drive.google.com/open?id=1PznYQcsR23NS4EQ-l4tKz5mKU-1TjS-7)
 
 ## Prerequisites
 * [MATLAB][MATLAB]
@@ -122,8 +122,6 @@ This project is licensed under the [GNU GPLv3 License][LICENSE.md].
 [Unity 3D]: https://unity3d.com/unity
 [Android Studio]: https://developer.android.com/studio
 [MATLAB]: https://www.mathworks.com/downloads/
-
-[Getting started]: https://drive.google.com/open?id=1PznYQcsR23NS4EQ-l4tKz5mKU-1TjS-7
 [Leonardo Molina]: https://github.com/leomol
 
 [LICENSE.md]: LICENSE.md
