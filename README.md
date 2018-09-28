@@ -5,7 +5,7 @@ Controller for virtual reality tasks for execution of arbitrary experimental par
 
 ## Getting Started
 Here's a short video showing how to run an example, assuming you fulfill the prerequisites:
-[![Circle maze demo](circle-maze-demo.png)](https://drive.google.com/open?id=1PznYQcsR23NS4EQ-l4tKz5mKU-1TjS-7)
+[![Circle maze demo](doc/circle-maze-demo.png)](https://drive.google.com/open?id=1PznYQcsR23NS4EQ-l4tKz5mKU-1TjS-7)
 
 ## Prerequisites
 * [MATLAB][MATLAB]
