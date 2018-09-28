@@ -1,6 +1,6 @@
 % 2017-06-18. Leonardo Molina.
-% 2018-05-03. Last modified.
-classdef ServoMotor < handle
+% 2018-09-21. Last modified.
+classdef ServoMotor < Event
     properties (Access = private)
         pwm
         minTic
@@ -8,9 +8,9 @@ classdef ServoMotor < handle
         maxAngle
         scheduler
         
-        map = struct('angle', repmat({NaN}, 1, 64), 'stop', repmat({NaN}, 1, 64), 'running', repmat({false}, 1, 64));
+        count
+        map = struct('fall', repmat({NaN}, 1, 64), 'handle', repmat({NaN}, 1, 64), 'running', repmat({false}, 1, 64));
         
-        running = 0
         queue = struct('channel', {}, 'angle', {}, 'duration', {});
     end
     
@@ -41,6 +41,8 @@ classdef ServoMotor < handle
             
             obj.scheduler = Scheduler();
             obj.pwm = Bridge.PWM(bridge, round(1e6 * MHz));
+            
+            obj.count = 0;
         end
         
         function delete(obj)
@@ -63,20 +65,29 @@ classdef ServoMotor < handle
             % Set a angle for a channel inmediately for the given duration
             % then release the channel.
             
-            index = channel + 1;
-            fall = round(angle / obj.maxAngle * obj.deltaTic + obj.minTic);
-            obj.pwm.set(index, fall);
+            % Remove channel action from a schedule.
+            k = [obj.queue.channel] == channel;
+            obj.queue(k) = [];
             
+            index = channel + 1;
             if obj.map(index).running
-                % Cancel a previously scheduled stop.
-                obj.scheduler.stop(obj.map(index).stop);
+                % If channel is currently running, cancel a scheduled stop.
+                % Number of running channels remain unchanged.
+                delete(obj.map(index).handle);
             else
-                obj.running = obj.running + 1;
+                obj.count = obj.count + 1;
             end
             
-            % Schedule a stop.
+            % Send instruction to board.
+            fall = round(angle / obj.maxAngle * obj.deltaTic + obj.minTic);
+            if ~obj.map(index).running || fall ~= obj.map(index).fall
+                obj.map(index).fall = fall;
+                obj.pwm.set(channel, fall);
+            end
             obj.map(index).running = true;
-            obj.map(index).stop = obj.scheduler.delay({obj, 'stop', channel}, duration);
+            
+            % Schedule a stop.
+            obj.map(index).handle = obj.scheduler.delay({obj, 'stop', channel}, duration);
         end
         
         function schedule(obj, channel, angle, duration)
@@ -84,35 +95,49 @@ classdef ServoMotor < handle
             % When the queue is free, set the angle for a channel for the
             % given duration then release the channel.
             
-            % Add to the back.
+            % Add to back of the queue.
             n = numel(obj.queue) + 1;
             obj.queue(n).channel = channel;
             obj.queue(n).angle = angle;
             obj.queue(n).duration = duration;
-            if n == 1
-                obj.set(channel, angle, duration);
+            
+            if obj.count == 0 && n == 1
+                % If nothing is currently running and this is the only element in the queue.
+                obj.pop();
             end
         end
         
         function stop(obj, channel)
             % Bridge.ServoMotor.stop(channel)
-            % Cancel all scheduleSame as set.
             
+            % Stopping a channel enables other instructions in the queue.
+            n = numel(obj.queue);
             index = channel + 1;
+            idle = false;
             if obj.map(index).running
                 obj.map(index).running = false;
                 obj.pwm.set(channel, 0);
-                obj.running = obj.running - 1;
+                obj.count = obj.count - 1;
+                if n == 0
+                    idle = true;
+                end
             end
-            
-            if obj.running > 0
-                % Pop next element in the queue.
-                channel = obj.queue(1).channel;
-                angle = obj.queue(1).angle;
-                duration = obj.queue(1).duration;
-                obj.queue(1) = [];
-                obj.setup(channel, angle, duration);
+            if obj.count == 0 && n > 0
+                % If nothing is currently running and the queue is not empty.
+                obj.pop();
             end
+            if idle
+                obj.invoke('Idle');
+            end
+        end
+        
+        function pop(obj)
+            % Pop next element in the queue.
+            channel = obj.queue(1).channel;
+            angle = obj.queue(1).angle;
+            duration = obj.queue(1).duration;
+            obj.queue(1) = [];
+            obj.set(channel, angle, duration);
         end
     end
 end

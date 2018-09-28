@@ -6,12 +6,12 @@
 %   reward   - Send a reward for the given duration.
 %   register - Register to events.
 % 
-% ArduinoTreadmill events - obj.register(eventName, @callback):
+% ArduinoTreadmill Event list:
 %   Frame - An input frame was detected.
 %   Step  - Treadmill position changed.
 
 % 2018-03-05. Leonardo Molina.
-% 2018-05-21. Last modified.
+% 2018-09-28. Last modified.
 classdef ArduinoTreadmill < Event
     properties
         % step - Encoder position.
@@ -28,7 +28,7 @@ classdef ArduinoTreadmill < Event
     
     properties (Constant)
         % programVersion - Program version.
-        programVersion = '20180521'
+        programVersion = '20180928'
     end
     
     properties (Hidden)
@@ -40,6 +40,9 @@ classdef ArduinoTreadmill < Event
         % change - Direction the encoder last changed.
         change = 1
         
+        % contactPins - Pins for detecting licks.
+        contactPins = [42, 43]
+        
         % delta - Position increment for each step of the rotary encoder.
         delta
         
@@ -50,13 +53,13 @@ classdef ArduinoTreadmill < Event
         encoderSteps = 500
         
         % framePin - Arduino pin will listen to state changes (e.g. frame updates from a camera).
-        framePin = 14
+        framePin = 20
         
         % rewardPin - Arduino pin where a reward may be triggered.
         rewardPin = 8
         
         % tapePin - Pin for IR sensing reflective tapes.
-        tapePin = 15
+        tapePin = 3
         
         % triggerPin - Trigger-out pin to initiate external devices.
         triggerPin = 22
@@ -79,10 +82,14 @@ classdef ArduinoTreadmill < Event
             obj.bridge = Bridge(com);
             obj.bridge.register('DataReceived', @obj.onDataReceived);
             obj.bridge.register('ConnectionChanged', @obj.onConnectionChanged);
+            obj.bridge.verbose = false;
             obj.trigger = false;
             
             % Forward step depends on the encoder specs and wheel radius.
             obj.delta = 2 * pi / obj.encoderSteps * obj.wheelRadius;
+            
+            % Start Arduino.
+            obj.bridge.start();
         end
         
         function delete(obj)
@@ -120,6 +127,7 @@ classdef ArduinoTreadmill < Event
                 obj.bridge.getBinary(obj.framePin, 0, 0, 1);
                 obj.bridge.getRotation(obj.encoderPins, 1);
                 obj.bridge.getBinary(obj.tapePin, 0, 0, 1);
+                obj.bridge.getContact(obj.contactPins, 25, 25, 0, 0);
             end
         end
         
@@ -148,6 +156,8 @@ classdef ArduinoTreadmill < Event
                     if ~data.State
                         obj.invoke('Tape', obj.change > 0);
                     end
+                case obj.contactPins(1)
+                    obj.invoke('Lick', data.State);
             end
         end
     end

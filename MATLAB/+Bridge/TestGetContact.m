@@ -1,11 +1,11 @@
 % 2016-12-05. Leonardo Molina.
-% 2018-05-03. Last modified.
+% 2018-09-25. Last modified.
 classdef TestGetContact < handle
     properties
         bridge
         handles
         listeners
-        pins = [10 11 12 13];
+        pins = [10 11 42 43];
     end
     
     methods

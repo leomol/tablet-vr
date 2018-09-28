@@ -35,33 +35,47 @@
 % See also CircularMaze, TableTop, TwoChoice.
 
 % 2017-12-13. Leonardo Molina.
-% 2018-05-25. Leonardo Molina.
+% 2018-09-28. Leonardo Molina.
 classdef LinearMaze < handle
     properties
         % intertrialBehavior - Whether to permit behavior during an intertrial.
-        intertrialBehavior = false;
+        intertrialBehavior = false
         
         % intertrial - Duration (s) of an intertrial when last node is reached.
-        intertrialDuration = 1;
+        intertrialDuration = 1
         
         % logOnChange - Create a log entry with every change in position or rotation.
-        logOnChange = false;
+        logOnChange = false
         
         % logOnFrame - Create a log entry with every trigger-input.
-        logOnFrame = true;
+        logOnFrame = true
         
         % logOnUpdate - Create a log entry at the frequency of the behavior controller.
-        logOnUpdate = true;
+        logOnUpdate = true
 		
+        % rewardMode - When to deliver a reward.
+        %  onTrial: deliver a reward when a new trial is issued.
+        %  onTrialLick: enable a reward when a new trial is issued which must
+        %    be claimed by licking the feeder within the rewardWindow.
+        %  onPositionLick: enable a reward when a target position is reached
+        %    and reward must be claimed by licking the feeder within the rewardWindow.
+        rewardMode = 'onPositionLick'
+        
         % rewardDuration - Duration (s) the reward valve remains open after a trigger.
-        rewardDuration = 0.040;
+        rewardDuration = 0.040
         
         % rewardTone - Frequency and duration of the tone during a reward.
-        rewardTone = [2000, 0.5];
+        rewardTone = [2000, 0.5]
+        
+        % rewardWindow - Time (s) window after a trial to allow claiming a reward.
+        rewardWindow = 3
+        
+        % rewardPosition - Position to reward on lick.
+        rewardPosition = -50
         
         % tapeTrigger - Whether to initiate a new trial when photosensor
         % detects a tape strip in the belt.
-        tapeTrigger = false;
+        tapeTrigger = false
         
         % treadmill - Arduino controlled apparatus.
         treadmill
@@ -71,17 +85,17 @@ classdef LinearMaze < handle
         % filename - Name of the log file.
         filename
         
-        % scene - Name of an existing scene.
+        % scene - Name of an existing scene (Tunnel|Classroom).
         scene = 'Tunnel';
 		
         % vertices - Vertices of the maze (x1, y1, x2, y2, ... in cm).
         vertices = [0, -100, ...
                     0,    0, ...
                     0, 1000, ...
-                    0, -Inf];
+                    0, -Inf]
         
         % resetNode - When resetNode is reached, re-start.
-        resetNode = 2;
+        resetNode = 2
     end
     
     properties (Dependent)
@@ -103,7 +117,7 @@ classdef LinearMaze < handle
         className
         
         % enabled - Whether to allow treadmill to cause movement.
-        enabled = false;
+        enabled = false
         
         % fid - Log file identifier.
         fid
@@ -111,9 +125,9 @@ classdef LinearMaze < handle
         % figureHandle - UI handle to control figure.
         figureHandle
         
-        mGain = 1;
+        mGain = 1
         
-        mSpeed = 0;
+        mSpeed = 0
         
         % nodes - Nodes object for controlling behavior.
         nodes
@@ -123,6 +137,12 @@ classdef LinearMaze < handle
         
         % pauseId - Process id for scheduling pauses.
         pauseId
+        
+        % rewardEnabled - Whether a reward is enabled in the current trial.
+        rewardEnabled = false
+        
+        % rewardTimeout - Time when a reward is set to expire.
+        rewardTimeout = 0
         
         % scheduler - Scheduler object for non-blocking pauses.
         scheduler
@@ -134,7 +154,7 @@ classdef LinearMaze < handle
         startTime
         
         % tapeControl - Control when to trigger a trial based on tape crossings.
-        tapeControl = [0 1]
+        tapeControl = [0, 1]
         
         % textBox - Textbox GUI.
         textBox
@@ -151,7 +171,7 @@ classdef LinearMaze < handle
         fps = 50
         
         % programVersion - Version of this class.
-        programVersion = '20180525';
+        programVersion = '20180928'
     end
     
     methods
@@ -216,6 +236,7 @@ classdef LinearMaze < handle
             obj.treadmill.register('Frame', @obj.onFrame);
             obj.treadmill.register('Step', @obj.onStep);
             obj.treadmill.register('Tape', @obj.onTape);
+            obj.treadmill.register('Lick', @obj.onLick);
             
             % Initialize nodes.
             obj.nodes = Nodes();
@@ -368,8 +389,17 @@ classdef LinearMaze < handle
             % LinearMaze.newTrial()
             % Send a reward pulse, play a tone, log data, pause.
             
-            obj.treadmill.reward(obj.rewardDuration);
-            Tools.tone(obj.rewardTone(1), obj.rewardTone(2));
+            switch obj.rewardMode
+                case 'onTrial'
+                    obj.treadmill.reward(obj.rewardDuration);
+                    Tools.tone(obj.rewardTone(1), obj.rewardTone(2));
+                    obj.rewardEnabled = false;
+                case 'onTrialLick'
+                    obj.rewardTimeout = toc(obj.startTime) + obj.rewardWindow;
+                    obj.rewardEnabled = true;
+                case 'onPositionLick'
+                    obj.rewardEnabled = false;
+            end
             
             % Disable movement and show blank screen for the given duration.
             if obj.intertrialBehavior
@@ -453,6 +483,20 @@ classdef LinearMaze < handle
             end
         end
         
+        function onLick(obj, state)
+            % LinearMaze.onLick(state)
+            % Log licks. Also if enabled, deliver a reward on lick.
+            
+            if state
+                if toc(obj.startTime) < obj.rewardTimeout && obj.rewardEnabled
+                    obj.rewardTimeout = 0;
+                    obj.treadmill.reward(obj.rewardDuration);
+                    Tools.tone(obj.rewardTone(1), obj.rewardTone(2));
+                end
+                obj.log('lick');
+            end
+        end
+        
         function onNode(obj, node)
             % LinearMaze.onNode(node)
             % Reached a reset node.
@@ -465,7 +509,7 @@ classdef LinearMaze < handle
         
         function onStep(obj, step)
             % LinearMaze.onStep(step)
-            % The rotary encoder changed, update behavior if enabled
+            % The rotary encoder changed, update behavior if enabled.
             % Create an entry in the log file otherwise.
             
             if obj.enabled && obj.speed == 0 && ~obj.nodes.rotating
@@ -477,6 +521,11 @@ classdef LinearMaze < handle
         function onUpdate(obj)
             % LinearMaze.onUpdate()
             % Create an entry in the log file if logOnUpdate == true.
+            
+            if isequal(obj.rewardMode, 'onPositionLick') && obj.nodes.position(2) >= obj.rewardPosition && obj.rewardEnabled == false
+                obj.rewardEnabled = true;
+                obj.rewardTimeout = toc(obj.startTime) + obj.rewardWindow;
+            end
             
             if obj.speed ~= 0 && obj.enabled && ~obj.nodes.rotating
                 % Open-loop updates position when open-loop speed is different 0.

@@ -86,7 +86,7 @@
 %       servo.angle = 0;
 
 % 2016-12-05. Leonardo Molina.
-% 2018-05-24. Last modified.
+% 2018-09-19. Last modified.
 classdef Bridge < Event
     properties (Constant)
         % nPins - Maximum number of pins.
@@ -99,16 +99,16 @@ classdef Bridge < Event
         maxU24 = 2 ^ 24 - 1;
         
         % pinRange - I/O pin range.
-        pinRange = [0 Bridge.nPins - 1];
+        pinRange = [0, Bridge.nPins - 1];
         
         % addressRange - Arduino CPU address range.
-        addressRange = [0 Bridge.maxU8];
+        addressRange = [0, Bridge.maxU8];
         
         % durationRange - Duration range (us).
-        durationRange = [0 Bridge.maxU24];
+        durationRange = [0, Bridge.maxU24];
         
         % factorRange - Report scale factor.
-        factorRange = [1 Bridge.maxU8];
+        factorRange = [1, Bridge.maxU8];
     end
     
     properties (Constant, Access = private)
@@ -129,8 +129,8 @@ classdef Bridge < Event
     
     properties (Access = private)
         device     % 
+        repeat     % 
         retry      % 
-        scheduler  % 
         queueMatch % 
         setup      % State received after setup.
         states     % 1-bit state.
@@ -173,7 +173,7 @@ classdef Bridge < Event
             if Objects.isValid(globalObject)
                 % Recover object handle.
                 obj = globalObject;
-                Objects.delete(obj.scheduler);
+                obj.stop();
                 obj.deleteDevice();
             end
             Global.set(globalName, obj);
@@ -198,15 +198,8 @@ classdef Bridge < Event
             % Bridge.delete()
             % Stop connection and release the serial port resource.
             
-            delete(obj.scheduler);
+            obj.stop();
             obj.deleteDevice();
-        end
-        
-        function deleteDevice(obj)
-            if isa(obj.device, 'serial') && isvalid(obj.device)
-                fclose(obj.device);
-                delete(obj.device);
-            end
         end
         
         function handle = register(obj, var, callback)
@@ -233,31 +226,21 @@ classdef Bridge < Event
         
         function unregister(obj, ids)
             % Bridge.unregister(id)
-            % Stop capturing a region according to their id.
+            % Stop capturing a pin.
             
             uids = [obj.callbackMap.id];
             obj.zones(ismember(uids, ids)) = [];
         end
         
-        % Access = private
-        function initialize(obj)
-            obj.retry = true;
-            obj.setup = false(Bridge.nPins, 1);
-            obj.states = NaN(Bridge.nPins, 1);
-            obj.counts = zeros(Bridge.nPins, 2);
-            obj.factor = zeros(Bridge.nPins, 1);
-            obj.connected = false;
-            obj.outputs = zeros(1, 0);
-            obj.inputs = zeros(1, 0);
-            obj.mverbose = false;
-            obj.enabled = false;
-            
-            % Initialize handshake tester.
-            obj.queueMatch = QueueMatch(obj.handshake);
-            
+        function start(obj)
             % Threads.
-            obj.scheduler = Scheduler();
-            obj.scheduler.repeat(@obj.loop, obj.timeout);
+            obj.stop();
+            obj.repeat = Scheduler.Repeat(@obj.loop, obj.timeout);
+        end
+        
+        function stop(obj)
+            % Threads.
+            Objects.delete(obj.repeat);
         end
         
         function getBinary(obj, pin, debounceRising, debounceFalling, factor)
@@ -423,6 +406,29 @@ classdef Bridge < Event
     end
     
     methods (Access = private)
+        function deleteDevice(obj)
+            if isa(obj.device, 'serial') && isvalid(obj.device)
+                fclose(obj.device);
+                delete(obj.device);
+            end
+        end
+        
+        function initialize(obj)
+            obj.retry = true;
+            obj.setup = false(Bridge.nPins, 1);
+            obj.states = NaN(Bridge.nPins, 1);
+            obj.counts = zeros(Bridge.nPins, 2);
+            obj.factor = zeros(Bridge.nPins, 1);
+            obj.connected = false;
+            obj.outputs = zeros(1, 0);
+            obj.inputs = zeros(1, 0);
+            obj.mverbose = false;
+            obj.enabled = false;
+            
+            % Initialize handshake tester.
+            obj.queueMatch = QueueMatch(obj.handshake);
+        end
+            
         function reset(obj, pins)
             % Bridge.reset(pins)
             % Clear known data for the provided pins, including state count.
@@ -494,7 +500,6 @@ classdef Bridge < Event
             % Read and write to serial port. This method is meant to be
             % called by a timer. Note that MATLAB's timer is limited to 1ms
             % intervals.
-            
             % Read a few bytes at a time.
             nb = min(obj.device.BytesAvailable, 128);
             if nb > 0
